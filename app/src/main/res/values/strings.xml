@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Halina</string>
+    <item type="string" name="database_version" format="integer">1</item>
 </resources>
