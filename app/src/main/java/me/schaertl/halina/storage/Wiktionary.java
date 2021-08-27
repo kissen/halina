@@ -1,11 +1,11 @@
 package me.schaertl.halina.storage;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteStatement;
-import android.util.Log;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,78 +16,61 @@ public class Wiktionary {
      * may be interested in.
      */
     public static List<DictionaryEntry> lookUpChoicesFor(String query, Context context) {
-        // If the query is empty, return an empty list.
-
         if (query.trim().isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Set up the database.
-
-        final SQLiteDatabase db = getDatabaseFor(context);
-
-        try {
-            final List<DictionaryEntry> entries = queryForChoicesFor(query, db);
-            return entries;
-        } finally {
-            db.close();
+        try (SQLiteDatabase db = getDatabaseFor(context)) {
+            return queryChoicesFor(query, db);
         }
     }
 
-    private static List<DictionaryEntry> queryForChoicesFor(String query, SQLiteDatabase db) {
-        // Prepare the query.
+    @SuppressLint("Range")
+    private static List<DictionaryEntry> queryChoicesFor(String query, SQLiteDatabase db) {
+        // Prepare and execute the query.
 
         final String select = "words";
         final String[] from = { "id", "word" };
         final String where = "word LIKE ?";
         final String[] parameters = { query + "%" };
         final String limit = "100";
-        final Cursor resultCursor = db.query(select, from, where, parameters, null, null, null, limit);
 
-        // If we have no results, return nothing.
+        try (Cursor resultCursor = db.query(select, from, where, parameters, null, null, null, limit)) {
+            // If we have no results, return nothing.
 
-        if (resultCursor == null) {
-            return Collections.emptyList();
+            if (resultCursor == null) {
+                return Collections.emptyList();
+            }
+
+            if (!resultCursor.moveToFirst()) {
+                return Collections.emptyList();
+            }
+
+            // Iterate over each choice. Collect words as we go along.
+
+            final List<DictionaryEntry> entries = new ArrayList<>();
+
+            do {
+                final int id = resultCursor.getInt(resultCursor.getColumnIndex("id"));
+                final String word = resultCursor.getString(resultCursor.getColumnIndex("word"));
+                final DictionaryEntry entry = new DictionaryEntry(id, word);
+
+                entries.add(entry);
+            } while (resultCursor.moveToNext());
+
+            //  Man what a pain that was!
+
+            return entries;
         }
-
-        if (!resultCursor.moveToFirst()) {
-            return Collections.emptyList();
-        }
-
-        // Get internal ids. Check for validity.
-
-        final int idColumnId = resultCursor.getColumnIndex("id");
-        final int wordColumnId = resultCursor.getColumnIndex("word");
-
-        if (idColumnId < 0) {
-            Log.w(Wiktionary.class.getName(), "unexpected idColumnId=" + idColumnId);
-            return Collections.emptyList();
-        }
-
-        if (wordColumnId < 0) {
-            Log.w(Wiktionary.class.getName(), "unexpected wordColumnId=" + idColumnId);
-        }
-
-        // Iterate over each choice. Collect words as we go along.
-
-        final List<DictionaryEntry> entries = new ArrayList<>();
-
-        do {
-            final int id = resultCursor.getInt(idColumnId);
-            final String word = resultCursor.getString(wordColumnId);
-            final DictionaryEntry entry = new DictionaryEntry(id, word);
-
-            entries.add(entry);
-        } while (resultCursor.moveToNext());
-
-        //  Man what a pain that was!
-
-        return entries;
     }
 
     private static SQLiteDatabase getDatabaseFor(Context context) {
-        final DatabaseHelper helper = new DatabaseHelper(context);
-        helper.initializeDataBase();
-        return helper.getReadableDatabase();
+        try {
+            final DatabaseHelper helper = new DatabaseHelper(context);
+            helper.ensureImported();
+            return helper.getReadableDatabase();
+        } catch (IOException e) {
+            throw new Error("accessing underlying dictionary storage failed", e);
+        }
     }
 }
