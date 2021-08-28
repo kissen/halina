@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 
 public class Wiktionary {
+    private Wiktionary() {
+    }
+
     /**
      * Given query string, return a list of possible candidates the user
      * may be interested in.
