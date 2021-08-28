@@ -97,7 +97,7 @@ public class Wiktionary {
         }
     }
 
-    private static SQLiteDatabase getDatabaseFor(Context context) {
+    private static synchronized SQLiteDatabase getDatabaseFor(Context context) {
         try {
             final DatabaseHelper helper = new DatabaseHelper(context);
             helper.ensureImported();
