@@ -5,9 +5,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
+import android.util.Log;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 
@@ -17,8 +16,11 @@ import java.util.stream.Collectors;
 import me.schaertl.halina.storage.Word;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.AbstractTextFieldUpdater;
+import me.schaertl.halina.support.WordListAdapter;
 
 public class MainActivity extends AppCompatActivity {
+    private static String TAG = MainActivity.class.getName();
+
     /***
      * Time in ms when the list was most recently updated.
      */
@@ -34,13 +36,14 @@ public class MainActivity extends AppCompatActivity {
         final EditText searchField = findViewById(R.id.text_main_input);
         searchField.addTextChangedListener(new TextFieldUpdater(getApplicationContext()));
 
-        // Set up event handler for test button.
-        final Button button = findViewById(R.id.button_test);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                int id = (int) (Math.random() * 100);
-                callViewActivityFor(id, "test");
+        // Set up event handler for list items.
+        final ListView candidatesList = findViewById(R.id.list_main);
+        candidatesList.setOnItemClickListener((av, v, pos, l) -> {
+            final Object adapter = av.getAdapter();
+            if (adapter instanceof WordListAdapter) {
+                final WordListAdapter wordListAdapter = (WordListAdapter) adapter;
+                final Word word = wordListAdapter.getUnderlyingWord(pos);
+                callViewActivityFor(word.id, word.word);
             }
         });
     }
@@ -51,14 +54,14 @@ public class MainActivity extends AppCompatActivity {
      * @param choices Entries to show. First elements are listed first.
      * @param startedAt Time in milliseconds since epoch when the calling job was started.
      */
-    private synchronized void updateListWith(List<String> choices, long startedAt) {
+    private synchronized void updateListWith(List<Word> choices, long startedAt) {
         // If the result is older than the most recent update, discard it.
         if (startedAt <= this.lastResultSetAt) {
             return;
         }
 
         // If not, update the list accordingly.
-        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.list_entry, choices);
+        final WordListAdapter adapter = new WordListAdapter(this, R.layout.list_entry, choices);
         final ListView targetList = findViewById(R.id.list_main);
         runOnUiThread(() -> targetList.setAdapter(adapter));
 
@@ -123,9 +126,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void run() {
             final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
-            final List<String> choices = entries.stream().map(de -> de.word).collect(Collectors.toList());
-
-            updateListWith(choices, this.startedAt);
+            updateListWith(entries, this.startedAt);
         }
     }
 }
