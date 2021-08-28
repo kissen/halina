@@ -4,8 +4,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -15,6 +13,7 @@ import java.util.stream.Collectors;
 
 import me.schaertl.halina.storage.DictionaryEntry;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.AbstractTextFieldUpdater;
 
 public class MainActivity extends AppCompatActivity {
     /***

@@ -1,4 +1,4 @@
-package me.schaertl.halina;
+package me.schaertl.halina.support;
 
 import android.text.Editable;
 import android.text.TextWatcher;
