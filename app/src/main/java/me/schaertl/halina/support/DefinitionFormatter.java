@@ -3,6 +3,11 @@ package me.schaertl.halina.support;
 import android.text.Html;
 import android.text.Spanned;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import me.schaertl.halina.storage.Definition;
 
 public class DefinitionFormatter {
@@ -14,7 +19,7 @@ public class DefinitionFormatter {
 
         buf.append("<ul>\n");
 
-        for (final String definition : boxed.definitions) {
+        for (final String definition : uniqueElementsIn(boxed.definitions)) {
             // For now we drop the [[links]] because implementing them is going to be
             // a topic of its own.
             final String withoutLinks = definition.replace("[", "").replace("]", "");
@@ -27,5 +32,19 @@ public class DefinitionFormatter {
         buf.append("</ul>\n");
 
         return Html.fromHtml(buf.toString(), 0);
+    }
+
+    private static List<String> uniqueElementsIn(List<String> list) {
+        final List<String> uniqueElements = new ArrayList<>(list.size());
+        final Set<String> seen = new HashSet<>();
+
+        for (final String element : list) {
+            if (!seen.contains(element)) {
+                uniqueElements.add(element);
+                seen.add(element);
+            }
+        }
+
+        return uniqueElements;
     }
 }
