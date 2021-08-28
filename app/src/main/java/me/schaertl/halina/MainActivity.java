@@ -5,17 +5,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.ArrayAdapter;
-import android.widget.EditText;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.ListView;
+import android.widget.SearchView;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import me.schaertl.halina.storage.Word;
 import me.schaertl.halina.storage.Wiktionary;
-import me.schaertl.halina.support.AbstractTextFieldUpdater;
 import me.schaertl.halina.support.WordListAdapter;
 
 public class MainActivity extends AppCompatActivity {
@@ -32,10 +31,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Set up event handler for search field..
-        final EditText searchField = findViewById(R.id.text_main_input);
-        searchField.addTextChangedListener(new TextFieldUpdater(getApplicationContext()));
-
         // Set up event handler for list items.
         final ListView candidatesList = findViewById(R.id.list_main);
         candidatesList.setOnItemClickListener((av, v, pos, l) -> {
@@ -46,6 +41,43 @@ public class MainActivity extends AppCompatActivity {
                 callViewActivityFor(word.id, word.word);
             }
         });
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Save the context for later.
+        final Context context = getApplicationContext();
+
+        // Inflate the menu. You know at some point humanity made a mistake when
+        // it now has to worry about inflating menus.
+        final MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main_menu, menu);
+
+        // Get the menu.
+        final MenuItem searchViewItem = menu.findItem(R.id.app_bar_search);
+        final SearchView searchView = (SearchView) searchViewItem.getActionView();
+
+        // Some UI shenanigans I can't seem to achieve in XML.
+        searchView.setIconified(false);
+        searchView.setQueryHint("Search");
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                searchView.clearFocus();
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String query) {
+                final Thread worker = new ResultFinder(query, context);
+                worker.start();
+
+                return false;
+            }
+        });
+
+        return super.onCreateOptionsMenu(menu);
     }
 
     /**
@@ -78,26 +110,6 @@ public class MainActivity extends AppCompatActivity {
         next.putExtras(arguments);
 
         startActivity(next);
-    }
-
-    /**
-     * Helper class that handles updates to the current search. Every time the user
-     * enters a new character into the search bar, this TextFieldUpdater is called
-     * to action. It looks up possible results in the underlying word database.
-     */
-    private class TextFieldUpdater extends AbstractTextFieldUpdater {
-        private final Context parentContext;
-
-        public TextFieldUpdater(Context context) {
-            this.parentContext = context;
-        }
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {
-            final String query = s.toString();
-            final Thread worker = new ResultFinder(query, this.parentContext);
-            worker.start();
-        }
     }
 
     /**

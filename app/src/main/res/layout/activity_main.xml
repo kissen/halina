@@ -11,17 +11,6 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/text_main_input"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:fontFamily="serif"
-            android:hint="Search"
-            android:inputType="textPersonName|text"
-            android:padding="8pt"
-            android:textSize="24sp" />
-
         <ListView
             android:id="@+id/list_main"
             android:layout_width="match_parent"
