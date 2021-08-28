@@ -3,8 +3,11 @@ package me.schaertl.halina;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 
@@ -27,9 +30,19 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Set up event handlers.
+        // Set up event handler for search field..
         final EditText searchField = findViewById(R.id.text_main_input);
         searchField.addTextChangedListener(new TextFieldUpdater(getApplicationContext()));
+
+        // Set up event handler for test button.
+        final Button button = findViewById(R.id.button_test);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final Intent next = new Intent(MainActivity.this, ViewEntryActivity.class);
+                startActivity(next);
+            }
+        });
     }
 
     /**
@@ -51,6 +64,17 @@ public class MainActivity extends AppCompatActivity {
 
         // Update complete. Remember the latest state.
         this.lastResultSetAt = startedAt;
+    }
+
+    private void callViewActivityFor(int wordId, String word) {
+        final Bundle arguments = new Bundle();
+        arguments.putInt("word_id", wordId);
+        arguments.putString("word", word);
+
+        final Intent next = new Intent(this, ViewEntryActivity.class);
+        next.putExtras(arguments);
+
+        startActivity(next);
     }
 
     /**
