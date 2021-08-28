@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class Wiktionary {
     /**
@@ -25,10 +26,17 @@ public class Wiktionary {
         }
     }
 
+    /**
+     * Given query string, return the defintion for given id.
+     */
+    public static Optional<Definition> lookUpDefinitionFor(int wordId, Context context) {
+        try (SQLiteDatabase db = getDatabaseFor(context)) {
+            return queryDefinitionFor(wordId, db);
+        }
+    }
+
     @SuppressLint("Range")
     private static List<Word> queryChoicesFor(String query, SQLiteDatabase db) {
-        // Prepare and execute the query.
-
         final String select = "words";
         final String[] from = { "id", "word" };
         final String where = "word LIKE ?";
@@ -36,8 +44,6 @@ public class Wiktionary {
         final String limit = "100";
 
         try (Cursor resultCursor = db.query(select, from, where, parameters, null, null, null, limit)) {
-            // If we have no results, return nothing.
-
             if (resultCursor == null) {
                 return Collections.emptyList();
             }
@@ -45,8 +51,6 @@ public class Wiktionary {
             if (!resultCursor.moveToFirst()) {
                 return Collections.emptyList();
             }
-
-            // Iterate over each choice. Collect words as we go along.
 
             final List<Word> entries = new ArrayList<>();
 
@@ -58,9 +62,35 @@ public class Wiktionary {
                 entries.add(entry);
             } while (resultCursor.moveToNext());
 
-            //  Man what a pain that was!
-
             return entries;
+        }
+    }
+
+    @SuppressLint("Range")
+    private static Optional<Definition> queryDefinitionFor(int wordId, SQLiteDatabase db) {
+        final String select = "definitions";
+        final String[] from = { "word_id", "definition" };
+        final String where = "word_id=" + wordId;
+        final String limit = "1000";
+
+        try (Cursor resultCursor = db.query(select, from, where, null, null, null, null, limit)) {
+            if (resultCursor == null) {
+                return Optional.empty();
+            }
+
+            if (!resultCursor.moveToFirst()) {
+                return Optional.empty();
+            }
+
+            final List<String> definitions = new ArrayList<>();
+
+            do {
+                final String definition = resultCursor.getString(resultCursor.getColumnIndex("definition"));
+                definitions.add(definition);
+            } while (resultCursor.moveToNext());
+
+            final Definition boxed = new Definition(wordId, definitions);
+            return Optional.of(boxed);
         }
     }
 
