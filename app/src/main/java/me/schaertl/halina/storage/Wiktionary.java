@@ -15,7 +15,7 @@ public class Wiktionary {
      * Given query string, return a list of possible candidates the user
      * may be interested in.
      */
-    public static List<DictionaryEntry> lookUpChoicesFor(String query, Context context) {
+    public static List<Word> lookUpChoicesFor(String query, Context context) {
         if (query.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -26,7 +26,7 @@ public class Wiktionary {
     }
 
     @SuppressLint("Range")
-    private static List<DictionaryEntry> queryChoicesFor(String query, SQLiteDatabase db) {
+    private static List<Word> queryChoicesFor(String query, SQLiteDatabase db) {
         // Prepare and execute the query.
 
         final String select = "words";
@@ -48,12 +48,12 @@ public class Wiktionary {
 
             // Iterate over each choice. Collect words as we go along.
 
-            final List<DictionaryEntry> entries = new ArrayList<>();
+            final List<Word> entries = new ArrayList<>();
 
             do {
                 final int id = resultCursor.getInt(resultCursor.getColumnIndex("id"));
                 final String word = resultCursor.getString(resultCursor.getColumnIndex("word"));
-                final DictionaryEntry entry = new DictionaryEntry(id, word);
+                final Word entry = new Word(id, word);
 
                 entries.add(entry);
             } while (resultCursor.moveToNext());

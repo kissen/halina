@@ -14,7 +14,7 @@ import android.widget.ListView;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import me.schaertl.halina.storage.DictionaryEntry;
+import me.schaertl.halina.storage.Word;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.AbstractTextFieldUpdater;
 
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            final List<DictionaryEntry> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
+            final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
             final List<String> choices = entries.stream().map(de -> de.word).collect(Collectors.toList());
 
             updateListWith(choices, this.startedAt);
