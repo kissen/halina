@@ -19,9 +19,9 @@ public class DefinitionFormatter {
             // a topic of its own.
             final String withoutLinks = definition.replace("[", "").replace("]", "");
 
-            buf.append("    <li>");
+            buf.append("    <p>");
             buf.append(withoutLinks);
-            buf.append("</li>\n");
+            buf.append("</p>\n");
         }
 
         buf.append("</ul>\n");

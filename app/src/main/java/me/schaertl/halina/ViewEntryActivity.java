@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
-import android.text.Spannable;
 import android.text.Spanned;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,8 +33,7 @@ public class ViewEntryActivity extends AppCompatActivity {
         }
 
         // Set up title.
-        final TextView titleView = findViewById(R.id.text_title);
-        titleView.setText(this.word);
+        setTitle(word);
 
         // Start looking for the contents.
         final Thread worker = new DefinitionFinder(getApplicationContext());
