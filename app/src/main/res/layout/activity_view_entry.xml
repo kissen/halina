@@ -19,8 +19,8 @@
             android:layout_height="wrap_content"
             android:fontFamily="serif"
             android:padding="8pt"
-            android:text="TextView"
-            android:textSize="20sp" />
+            android:textColor="?android:attr/colorForeground"
+            android:textSize="24sp" />
 
         <ScrollView
             android:id="@+id/scroll_content"
@@ -37,8 +37,10 @@
                     android:id="@+id/text_content"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
+                    android:fontFamily="serif"
                     android:padding="8pt"
-                    android:text="TextView" />
+                    android:textColor="?android:attr/colorForeground"
+                    android:textSize="20sp" />
             </LinearLayout>
         </ScrollView>
 

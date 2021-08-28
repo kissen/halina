@@ -5,6 +5,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
+import android.text.Spannable;
+import android.text.Spanned;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -12,6 +14,7 @@ import java.util.Optional;
 
 import me.schaertl.halina.storage.Definition;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.DefinitionFormatter;
 
 public class ViewEntryActivity extends AppCompatActivity {
     private int wordId;
@@ -47,7 +50,7 @@ public class ViewEntryActivity extends AppCompatActivity {
         });
     }
 
-    private void setContent(String content) {
+    private void setContent(Spanned content) {
         final TextView titleView = findViewById(R.id.text_content);
         runOnUiThread(() -> titleView.setText(content));
     }
@@ -69,7 +72,8 @@ public class ViewEntryActivity extends AppCompatActivity {
             }
 
             final Definition definition = boxed.get();
-            setContent(definition.definitions.get(0));
+            final Spanned markup = DefinitionFormatter.format(word, definition);
+            setContent(markup);
         }
     }
 }
