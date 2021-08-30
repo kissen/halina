@@ -28,6 +28,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:fontFamily="serif"
+                    android:linksClickable="true"
                     android:padding="8pt"
                     android:textColor="?android:attr/colorForeground"
                     android:textSize="20sp" />

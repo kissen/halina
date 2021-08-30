@@ -1,13 +1,20 @@
 package me.schaertl.halina;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
+import android.text.style.URLSpan;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,6 +65,9 @@ public class ViewEntryActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void onLinkClicked(String addr) {
+    }
+
     @SuppressLint("ShowToast")
     private void showToast(String message) {
         runOnUiThread(() -> {
@@ -66,9 +76,33 @@ public class ViewEntryActivity extends AppCompatActivity {
         });
     }
 
-    private void setContent(Spanned content) {
-        final TextView titleView = findViewById(R.id.text_content);
-        runOnUiThread(() -> titleView.setText(content));
+    private void setHtmlContent(String html) {
+        final TextView contentView = findViewById(R.id.text_content);
+
+        final CharSequence markup = Html.fromHtml(html, 0);
+        final SpannableStringBuilder builder = new SpannableStringBuilder(markup);
+
+        final URLSpan[] urls = builder.getSpans(0, markup.length(), URLSpan.class);
+        for (final URLSpan span : urls) {
+            final int start = builder.getSpanStart(span);
+            final int end = builder.getSpanEnd(span);
+            final int flags = builder.getSpanFlags(span);
+
+            final ClickableSpan clickableSpan = new ClickableSpan() {
+                @Override
+                public void onClick(@NonNull View view) {
+                    // TODO
+                }
+            };
+
+            builder.setSpan(clickableSpan, start, end, flags);
+            builder.removeSpan(span);
+        }
+
+        runOnUiThread(() -> {
+            contentView.setText(builder);
+            contentView.setMovementMethod(LinkMovementMethod.getInstance());
+        });
     }
 
     private class DefinitionFinder extends Thread {
@@ -88,8 +122,8 @@ public class ViewEntryActivity extends AppCompatActivity {
             }
 
             final Definition definition = boxed.get();
-            final Spanned markup = DefinitionFormatter.format(word, definition);
-            setContent(markup);
+            final String markup = DefinitionFormatter.format(word, definition);
+            setHtmlContent(markup);
         }
     }
 }
