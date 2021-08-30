@@ -1,8 +1,5 @@
 package me.schaertl.halina.support;
 
-import android.text.Html;
-import android.text.Spanned;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -20,7 +17,7 @@ public class DefinitionFormatter {
     private DefinitionFormatter() {
     }
 
-    public static Spanned format(String word, Definition boxed) {
+    public static String format(String word, Definition boxed) {
         final StringBuilder buf = new StringBuilder();
 
         buf.append("<ul>\n");
@@ -32,8 +29,7 @@ public class DefinitionFormatter {
         }
 
         buf.append("</ul>\n");
-
-        return Html.fromHtml(buf.toString(), 0);
+        return buf.toString();
     }
 
     private static String htmlifyLinks(String definition) {

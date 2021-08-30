@@ -15,6 +15,7 @@ import java.util.List;
 
 import me.schaertl.halina.storage.Word;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.WordListAdapter;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
             if (adapter instanceof WordListAdapter) {
                 final WordListAdapter wordListAdapter = (WordListAdapter) adapter;
                 final Word word = wordListAdapter.getUnderlyingWord(pos);
-                callViewActivityFor(word.id, word.word);
+                Caller.callViewActivityFrom(MainActivity.this, word.word, word.id);
             }
         });
     }
@@ -84,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
         settingsItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem menuItem) {
-                callSettingsActivity();
+                Caller.callSettingsActivityFrom(MainActivity.this);
                 return false;
             }
         });
@@ -111,22 +112,6 @@ public class MainActivity extends AppCompatActivity {
 
         // Update complete. Remember the latest state.
         this.lastResultSetAt = startedAt;
-    }
-
-    private void callViewActivityFor(int wordId, String word) {
-        final Bundle arguments = new Bundle();
-        arguments.putInt("word_id", wordId);
-        arguments.putString("word", word);
-
-        final Intent next = new Intent(this, ViewEntryActivity.class);
-        next.putExtras(arguments);
-
-        startActivity(next);
-    }
-
-    private void callSettingsActivity() {
-        final Intent next = new Intent(this, SettingsActivity.class);
-        startActivity(next);
     }
 
     /**
