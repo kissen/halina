@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         final SearchView searchView = (SearchView) searchViewItem.getActionView();
 
         // Some UI shenanigans I can't seem to achieve in XML.
+        searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setIconified(false);
         searchView.setQueryHint("Search");
 
