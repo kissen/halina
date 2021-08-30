@@ -129,7 +129,7 @@ public class ViewEntryActivity extends AppCompatActivity {
         public void run() {
             final Optional<Definition> boxed;
 
-            // If the wordId is unkonwn it is set to -1. In that case we have
+            // If the wordId is unknown it is set to -1. In that case we have
             // to look up with just the word. It is going to be a bit slower,
             // but it is all we have to work with.
 
