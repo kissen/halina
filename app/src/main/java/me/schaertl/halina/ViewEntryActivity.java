@@ -9,7 +9,6 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.text.style.URLSpan;
@@ -22,10 +21,18 @@ import java.util.Optional;
 
 import me.schaertl.halina.storage.Definition;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.DefinitionFormatter;
 
 public class ViewEntryActivity extends AppCompatActivity {
+    /**
+     * Id of the currently displayed word or -1 if not known.
+     */
     private int wordId;
+
+    /**
+     * The currently displayed word.
+     */
     private String word;
 
     @Override
@@ -77,6 +84,8 @@ public class ViewEntryActivity extends AppCompatActivity {
     }
 
     private void setHtmlContent(String html) {
+        // Created with much help from https://stackoverflow.com/a/19989677
+
         final TextView contentView = findViewById(R.id.text_content);
 
         final CharSequence markup = Html.fromHtml(html, 0);
@@ -91,7 +100,11 @@ public class ViewEntryActivity extends AppCompatActivity {
             final ClickableSpan clickableSpan = new ClickableSpan() {
                 @Override
                 public void onClick(@NonNull View view) {
-                    // TODO
+                    final String addr = span.getURL();
+                    if (addr != null) {
+                        final String query = addr.replace("halina://", "");
+                        Caller.callViewActivityFrom(ViewEntryActivity.this, query);
+                    }
                 }
             };
 
@@ -114,7 +127,17 @@ public class ViewEntryActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            final Optional<Definition> boxed = Wiktionary.lookUpDefinitionFor(wordId, context);
+            final Optional<Definition> boxed;
+
+            // If the wordId is unkonwn it is set to -1. In that case we have
+            // to look up with just the word. It is going to be a bit slower,
+            // but it is all we have to work with.
+
+            if (ViewEntryActivity.this.wordId == -1) {
+                boxed = Wiktionary.lookUpDefinitionFor(word, context);
+            } else {
+                boxed = Wiktionary.lookUpDefinitionFor(wordId, context);
+            }
 
             if (!boxed.isPresent()) {
                 showToast("could not find definition");

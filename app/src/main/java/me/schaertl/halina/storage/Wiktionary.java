@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Path;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class Wiktionary {
     }
 
     /**
-     * Given query string, return the defintion for given id.
+     * Given query string, return the definition for given id.
      */
     public static Optional<Definition> lookUpDefinitionFor(int wordId, Context context) {
         try (SQLiteDatabase db = getDatabaseFor(context)) {
@@ -38,15 +39,24 @@ public class Wiktionary {
         }
     }
 
+    /**
+     * Given query string, return the definition for given word.
+     */
+    public static Optional<Definition> lookUpDefinitionFor(String word, Context contenxt) {
+        try (SQLiteDatabase db = getDatabaseFor(contenxt)) {
+            return queryDefinitionFor(word, db);
+        }
+    }
+
     @SuppressLint("Range")
     private static List<Word> queryChoicesFor(String query, SQLiteDatabase db) {
-        final String select = "words";
-        final String[] from = { "id", "word" };
+        final String from = "words";
+        final String[] select = { "id", "word" };
         final String where = "word LIKE ?";
         final String[] parameters = { query + "%" };
         final String limit = "100";
 
-        try (Cursor resultCursor = db.query(select, from, where, parameters, null, null, null, limit)) {
+        try (Cursor resultCursor = db.query(from, select, where, parameters, null, null, null, limit)) {
             if (resultCursor == null) {
                 return Collections.emptyList();
             }
@@ -71,12 +81,12 @@ public class Wiktionary {
 
     @SuppressLint("Range")
     private static Optional<Definition> queryDefinitionFor(int wordId, SQLiteDatabase db) {
-        final String select = "definitions";
-        final String[] from = { "word_id", "definition" };
+        final String from = "definitions";
+        final String[] select = { "word_id", "definition" };
         final String where = "word_id=" + wordId;
         final String limit = "1000";
 
-        try (Cursor resultCursor = db.query(select, from, where, null, null, null, null, limit)) {
+        try (Cursor resultCursor = db.query(from, select, where, null, null, null, null, limit)) {
             if (resultCursor == null) {
                 return Optional.empty();
             }
@@ -94,6 +104,38 @@ public class Wiktionary {
 
             final Definition boxed = new Definition(wordId, definitions);
             return Optional.of(boxed);
+        }
+    }
+
+    @SuppressLint("Range")
+    private static Optional<Definition> queryDefinitionFor(String word, SQLiteDatabase db) {
+        final Optional<Integer> wordId = queryWordIdFor(word, db);
+        if (!wordId.isPresent()) {
+            return Optional.empty();
+        }
+
+        return queryDefinitionFor(wordId.get(), db);
+    }
+
+    @SuppressLint("Range")
+    private static Optional<Integer> queryWordIdFor(String word, SQLiteDatabase db) {
+        final String from = "words";
+        final String[] select = { "id" };
+        final String where = "word = ?";
+        final String[] parameters = { word };
+        final String limit = "1";
+
+        try (Cursor resultCursor = db.query(from, select, where, parameters, null, null, limit)) {
+            if (resultCursor == null) {
+                return Optional.empty();
+            }
+
+            if (!resultCursor.moveToFirst()) {
+                return Optional.empty();
+            }
+
+            final int wordId = resultCursor.getInt(resultCursor.getColumnIndex("id"));
+            return Optional.of(wordId);
         }
     }
 
