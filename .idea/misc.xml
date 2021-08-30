@@ -8,7 +8,9 @@
         <entry key="app/src/main/res/layout/layout.xml" value="0.3351449275362319" />
         <entry key="app/src/main/res/layout/list_entry.xml" value="0.3351449275362319" />
         <entry key="app/src/main/res/layout/menu.xml" value="0.24909420289855072" />
+        <entry key="app/src/main/res/layout/settings_activity.xml" value="0.44114583333333335" />
         <entry key="app/src/main/res/menu/main_menu.xml" value="0.33" />
+        <entry key="app/src/main/res/xml/preference_screen.xml" value="0.44114583333333335" />
       </map>
     </option>
   </component>

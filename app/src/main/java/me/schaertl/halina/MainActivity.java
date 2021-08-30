@@ -56,12 +56,14 @@ public class MainActivity extends AppCompatActivity {
         // Get the menu.
         final MenuItem searchViewItem = menu.findItem(R.id.app_bar_search);
         final SearchView searchView = (SearchView) searchViewItem.getActionView();
+        final MenuItem settingsItem = menu.findItem(R.id.app_bar_settings);
 
         // Some UI shenanigans I can't seem to achieve in XML.
         searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setIconified(false);
         searchView.setQueryHint("Search");
 
+        // Set up event handler for list elements.
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
@@ -74,6 +76,15 @@ public class MainActivity extends AppCompatActivity {
                 final Thread worker = new ResultFinder(query, context);
                 worker.start();
 
+                return false;
+            }
+        });
+
+        // Set up event handler for basic menu items.
+        settingsItem.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem menuItem) {
+                callSettingsActivity();
                 return false;
             }
         });
@@ -110,6 +121,11 @@ public class MainActivity extends AppCompatActivity {
         final Intent next = new Intent(this, ViewEntryActivity.class);
         next.putExtras(arguments);
 
+        startActivity(next);
+    }
+
+    private void callSettingsActivity() {
+        final Intent next = new Intent(this, SettingsActivity.class);
         startActivity(next);
     }
 

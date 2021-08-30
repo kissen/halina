@@ -10,6 +10,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Halina">
         <activity
+            android:name=".SettingsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_settings" />
+        <activity
             android:name=".ViewEntryActivity"
             android:exported="true" />
         <activity
