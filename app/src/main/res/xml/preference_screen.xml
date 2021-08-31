@@ -2,10 +2,23 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceCategory android:title="About">
+    <PreferenceCategory android:title="Dictionary Management">
+        <Preference
+            android:id="@+id/preference_download_new_dictionary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@android:drawable/ic_menu_rotate"
+            app:summary="Currently installed: 2021-08-31"
+            app:title="Download new dictionary" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="About Halina">
+        <Preference
+            android:id="@+id/preference_open_source_licenses"
+            app:summary="Used libraries and associated licenses"
+            app:title="Open source licenses" />
 
         <Preference
-            app:key="version"
+            android:id="@+id/preference_app_version"
             app:summary="@string/app_version"
             app:title="Version" />
     </PreferenceCategory>
