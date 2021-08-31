@@ -31,4 +31,9 @@ public class Caller {
         final Intent next = new Intent(activity, SettingsActivity.class);
         activity.startActivity(next);
     }
+
+    public static void callDictionaryManagementFrom(AppCompatActivity activity) {
+        final Intent next = new Intent(activity, DictionaryManagementActivity.class);
+        activity.startActivity(next);
+    }
 }

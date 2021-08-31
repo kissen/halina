@@ -10,6 +10,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Halina">
         <activity
+            android:name=".support.DictionaryManagementActivity"
+            android:exported="true" />
+        <activity
             android:name=".SettingsActivity"
             android:exported="true"
             android:label="@string/title_activity_settings" />
