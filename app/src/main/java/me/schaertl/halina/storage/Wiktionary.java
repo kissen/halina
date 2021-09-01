@@ -51,7 +51,7 @@ public class Wiktionary {
     @SuppressLint("Range")
     private static List<Word> queryChoicesFor(String query, SQLiteDatabase db) {
         final String from = "words";
-        final String[] select = { "id", "word" };
+        final String[] select = { "id", "word", "nreferences" };
         final String where = "word LIKE ?";
         final String[] parameters = { query + "%" };
         final String limit = "100";
@@ -70,8 +70,9 @@ public class Wiktionary {
             do {
                 final int id = resultCursor.getInt(resultCursor.getColumnIndex("id"));
                 final String word = resultCursor.getString(resultCursor.getColumnIndex("word"));
-                final Word entry = new Word(id, word);
+                final int nreferences = resultCursor.getInt(resultCursor.getColumnIndex("nreferences"));
 
+                final Word entry = new Word(id, word, nreferences);
                 entries.add(entry);
             } while (resultCursor.moveToNext());
 
