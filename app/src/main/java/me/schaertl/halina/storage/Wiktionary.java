@@ -26,7 +26,9 @@ public class Wiktionary {
         }
 
         try (SQLiteDatabase db = getDatabaseFor(context)) {
-            return queryChoicesFor(query, db);
+            final List<Word> candidates = queryChoicesFor(query, db);
+            candidates.sort(new WordComparator(query));
+            return candidates;
         }
     }
 
