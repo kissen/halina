@@ -4,12 +4,19 @@
 
     <PreferenceCategory android:title="Dictionary Management">
         <Preference
+            android:id="@+id/preference_current_dictionary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:key="preference_current_dictionary"
+            app:summary="2021-08-12 (101 MiB)"
+            app:title="Currently installed dictionary" />
+        <Preference
             android:id="@+id/preference_download_new_dictionary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@android:drawable/ic_menu_rotate"
             app:key="preference_download_new_dictionary"
-            app:summary="Currently installed: 2021-08-31"
+            app:summary="Available: 2021-09-03 (120 MiB)"
             app:title="Download new dictionary" />
     </PreferenceCategory>
     <PreferenceCategory android:title="About Halina">
