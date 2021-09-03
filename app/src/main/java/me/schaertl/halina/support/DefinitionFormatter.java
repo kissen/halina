@@ -14,8 +14,7 @@ public class DefinitionFormatter {
     private final static String SUBSTITUTION = "<a href=\"halina://$1\">$1</a>";
     private final static Pattern PATTERN = Pattern.compile(REGEX, Pattern.MULTILINE);
 
-    private DefinitionFormatter() {
-    }
+    private DefinitionFormatter() {}
 
     public static String format(String word, Definition boxed) {
         final StringBuilder buf = new StringBuilder();

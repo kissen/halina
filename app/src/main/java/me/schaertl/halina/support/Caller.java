@@ -9,8 +9,7 @@ import me.schaertl.halina.SettingsActivity;
 import me.schaertl.halina.ViewEntryActivity;
 
 public class Caller {
-    private Caller() {
-    }
+    private Caller() {}
 
     public static void callViewActivityFrom(AppCompatActivity activity, String word) {
         callViewActivityFrom(activity, word, -1);
