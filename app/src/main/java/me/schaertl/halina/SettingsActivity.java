@@ -54,12 +54,12 @@ public class SettingsActivity extends AppCompatActivity {
             setPreferencesFromResource(R.xml.preference_screen, rootKey);
 
             // Set up event handlers.
-            final Preference dictionaryManagementPreference = findPreference("preference_download_new_dictionary");
-            if (dictionaryManagementPreference != null) {
-                dictionaryManagementPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            final Preference downloadNewDictionaryPreference = findPreference("preference_download_new_dictionary");
+            if (downloadNewDictionaryPreference != null) {
+                downloadNewDictionaryPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
                     @Override
                     public boolean onPreferenceClick(Preference preference) {
-                        parentActivity.runOnUiThread(() -> Caller.callDictionaryManagementFrom(parentActivity));
+                        // TODO
                         return false;
                     }
                 });
@@ -67,3 +67,20 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
