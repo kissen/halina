@@ -1,6 +1,11 @@
 package me.schaertl.halina;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
@@ -9,9 +14,13 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import me.schaertl.halina.storage.RemoteDictionaryChecker;
+import me.schaertl.halina.storage.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Caller;
+import me.schaertl.halina.support.FileSizeFormatter;
 
 public class SettingsActivity extends AppCompatActivity {
+    private Preference newDictionaryPreference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,10 +50,45 @@ public class SettingsActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
-        private final AppCompatActivity parentActivity;
+    @Override
+    protected void onResume() {
+        super.onResume();
 
-        public ClickableSettingsFragment(AppCompatActivity parentActivity) {
+        // Register handler for updated meta information.
+        final IntentFilter remoteDictionaryCheckerFilter = new IntentFilter(RemoteDictionaryChecker.INTENT_ACTION);
+        this.registerReceiver(onRemoteDictionaryChecker, remoteDictionaryCheckerFilter);
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Unregister all broadcast handlers.
+        this.unregisterReceiver(onRemoteDictionaryChecker);
+
+        super.onDestroy();
+    }
+
+    private final BroadcastReceiver onRemoteDictionaryChecker = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final RemoteDictionaryMeta meta = RemoteDictionaryChecker.getResultsFor(intent);
+            final String nbytes = FileSizeFormatter.format(meta.nbytes);
+            final String summary = String.format("%s (%s)", meta.version, nbytes);
+
+            runOnUiThread(() -> {
+                SettingsActivity.this.newDictionaryPreference.setSummary(summary);
+            });
+        }
+    };
+
+    private void onNewDictionaryClicked() {
+        final Thread checker = new RemoteDictionaryChecker(this.getApplicationContext());
+        checker.start();
+    }
+
+    public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
+        private final SettingsActivity parentActivity;
+
+        public ClickableSettingsFragment(SettingsActivity parentActivity) {
             this.parentActivity = parentActivity;
         }
 
@@ -54,33 +98,11 @@ public class SettingsActivity extends AppCompatActivity {
             setPreferencesFromResource(R.xml.preference_screen, rootKey);
 
             // Set up event handlers.
-            final Preference downloadNewDictionaryPreference = findPreference("preference_download_new_dictionary");
-            if (downloadNewDictionaryPreference != null) {
-                downloadNewDictionaryPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-                    @Override
-                    public boolean onPreferenceClick(Preference preference) {
-                        // TODO
-                        return false;
-                    }
-                });
-            }
+            parentActivity.newDictionaryPreference = findPreference("preference_download_new_dictionary");
+            parentActivity.newDictionaryPreference.setOnPreferenceClickListener(preference -> {
+                parentActivity.runOnUiThread(parentActivity::onNewDictionaryClicked);
+                return false;
+            });
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
