@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
@@ -14,14 +13,17 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import org.apache.commons.lang3.NotImplementedException;
+
 import me.schaertl.halina.storage.RemoteDictionaryChecker;
 import me.schaertl.halina.storage.RemoteDictionaryMeta;
-import me.schaertl.halina.support.Caller;
+import me.schaertl.halina.storage.Toaster;
 import me.schaertl.halina.support.FileSizeFormatter;
 import me.schaertl.halina.support.Result;
 
 public class SettingsActivity extends AppCompatActivity {
-    private Preference newDictionaryPreference;
+    private Preference checkForDictionariesPreference;
+    private Preference downloadNewDictionaryPreference;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,24 +76,34 @@ public class SettingsActivity extends AppCompatActivity {
             final Result<RemoteDictionaryMeta> result = RemoteDictionaryChecker.getResultsFor(intent);
 
             if (result.isError()) {
-                setSummary(String.format("Error: %s", result.getErrorMessage()));
+                final String summary = String.format("Error: %s", result.getErrorMessage());
+
+                runOnUiThread(() -> {
+                    downloadNewDictionaryPreference.setVisible(false);
+                    checkForDictionariesPreference.setSummary(summary);
+                });
             } else {
                 final RemoteDictionaryMeta meta = result.getResult();
                 final String nbytes = FileSizeFormatter.format(meta.nbytes);
-                setSummary(String.format("%s (%s)", meta.version, nbytes));
-            }
-        }
+                final String summary = String.format("%s (%S)", meta.version, nbytes);
 
-        private void setSummary(String to) {
-            runOnUiThread(() -> {
-                SettingsActivity.this.newDictionaryPreference.setSummary(to);
-            });
+                runOnUiThread(() -> {
+                    downloadNewDictionaryPreference.setVisible(true);
+                    checkForDictionariesPreference.setSummary(summary);
+                });
+            }
         }
     };
 
-    private void onNewDictionaryClicked() {
+    private void onCheckForNewDictionaryClicked() {
         final Thread checker = new RemoteDictionaryChecker(this.getApplicationContext());
         checker.start();
+
+        Toaster.toastFrom(this, "checking for new dictionary...");
+    }
+
+    private void onDownloadNewDictionaryClicked() {
+        throw new NotImplementedException();
     }
 
     public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
@@ -106,10 +118,17 @@ public class SettingsActivity extends AppCompatActivity {
             // Load preferences from XML.
             setPreferencesFromResource(R.xml.preference_screen, rootKey);
 
-            // Set up event handlers.
-            parentActivity.newDictionaryPreference = findPreference("preference_download_new_dictionary");
-            parentActivity.newDictionaryPreference.setOnPreferenceClickListener(preference -> {
-                parentActivity.runOnUiThread(parentActivity::onNewDictionaryClicked);
+            // [Check for new dictionary]
+            parentActivity.checkForDictionariesPreference = findPreference("preference_download_meta");
+            parentActivity.checkForDictionariesPreference.setOnPreferenceClickListener(preference -> {
+                parentActivity.runOnUiThread(parentActivity::onCheckForNewDictionaryClicked);
+                return false;
+            });
+
+            // [Download new dictionary]
+            parentActivity.downloadNewDictionaryPreference = findPreference("preference_download_new_dictionary");
+            parentActivity.downloadNewDictionaryPreference.setOnPreferenceClickListener(perference -> {
+                parentActivity.runOnUiThread(parentActivity::onDownloadNewDictionaryClicked);
                 return false;
             });
         }

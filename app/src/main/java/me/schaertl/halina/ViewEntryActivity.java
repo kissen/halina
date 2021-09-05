@@ -20,6 +20,7 @@ import android.widget.Toast;
 import java.util.Optional;
 
 import me.schaertl.halina.storage.Definition;
+import me.schaertl.halina.storage.Toaster;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.DefinitionFormatter;
@@ -75,12 +76,8 @@ public class ViewEntryActivity extends AppCompatActivity {
     private void onLinkClicked(String addr) {
     }
 
-    @SuppressLint("ShowToast")
     private void showToast(String message) {
-        runOnUiThread(() -> {
-            final Toast toast = Toast.makeText(getApplicationContext(), message, Toast.LENGTH_LONG);
-            toast.show();
-        });
+        Toaster.toastFrom(ViewEntryActivity.this, message);
     }
 
     private void setHtmlContent(String html) {
