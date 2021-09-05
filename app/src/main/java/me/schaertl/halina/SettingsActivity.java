@@ -18,6 +18,7 @@ import me.schaertl.halina.storage.RemoteDictionaryChecker;
 import me.schaertl.halina.storage.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.FileSizeFormatter;
+import me.schaertl.halina.support.Result;
 
 public class SettingsActivity extends AppCompatActivity {
     private Preference newDictionaryPreference;
@@ -70,12 +71,20 @@ public class SettingsActivity extends AppCompatActivity {
     private final BroadcastReceiver onRemoteDictionaryChecker = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            final RemoteDictionaryMeta meta = RemoteDictionaryChecker.getResultsFor(intent);
-            final String nbytes = FileSizeFormatter.format(meta.nbytes);
-            final String summary = String.format("%s (%s)", meta.version, nbytes);
+            final Result<RemoteDictionaryMeta> result = RemoteDictionaryChecker.getResultsFor(intent);
 
+            if (result.isError()) {
+                setSummary(String.format("Error: %s", result.getErrorMessage()));
+            } else {
+                final RemoteDictionaryMeta meta = result.getResult();
+                final String nbytes = FileSizeFormatter.format(meta.nbytes);
+                setSummary(String.format("%s (%s)", meta.version, nbytes));
+            }
+        }
+
+        private void setSummary(String to) {
             runOnUiThread(() -> {
-                SettingsActivity.this.newDictionaryPreference.setSummary(summary);
+                SettingsActivity.this.newDictionaryPreference.setSummary(to);
             });
         }
     };
