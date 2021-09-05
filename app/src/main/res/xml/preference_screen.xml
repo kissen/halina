@@ -11,10 +11,17 @@
             app:summary="2021-08-12 (101 MiB)"
             app:title="Currently installed dictionary" />
         <Preference
-            android:id="@+id/preference_download_new_dictionary"
+            android:id="@+id/preference_download_meta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@android:drawable/ic_menu_rotate"
+            app:key="preference_download_meta"
+            app:summary="Query for a new version of the installed dictionary"
+            app:title="Check for new dictionary" />
+        <Preference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:isPreferenceVisible="false"
             app:key="preference_download_new_dictionary"
             app:summary="Available: 2021-09-03 (120 MiB)"
             app:title="Download new dictionary" />

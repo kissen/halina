@@ -47,7 +47,7 @@ public class RemoteDictionaryChecker extends Thread {
         }
 
         final RemoteDictionaryMeta meta = new RemoteDictionaryMeta("ABC", 42, "DEF");
-        putError("fucked!");
+        this.putResults(meta);
     }
 
     private void putResults(RemoteDictionaryMeta meta) {
