@@ -20,6 +20,6 @@ public class FileSizeFormatter {
         }
 
         final String unit = units.get(unitIdx);
-        return String.format("%d%s", remaining, unit);
+        return String.format("%d %s", remaining, unit);
     }
 }

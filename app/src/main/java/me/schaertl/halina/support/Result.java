@@ -63,6 +63,9 @@ public class Result<ResultType> {
             throw new IllegalStateException("tried to get error when error not present");
         }
 
-        return this.error.getMessage();
+        final String type = this.error.getClass().getName();
+        final String message = this.error.getMessage();
+
+        return String.format("%s: %s", type, message);
     }
 }

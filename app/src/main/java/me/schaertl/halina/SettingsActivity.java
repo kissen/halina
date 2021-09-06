@@ -1,5 +1,6 @@
 package me.schaertl.halina;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -15,13 +16,19 @@ import androidx.preference.PreferenceFragmentCompat;
 
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.Optional;
+
+import me.schaertl.halina.remote.Phase;
+import me.schaertl.halina.remote.Progress;
+import me.schaertl.halina.remote.RemoteDictionaryHandler;
+import me.schaertl.halina.remote.RemoteDictionaryService;
 import me.schaertl.halina.storage.RemoteDictionaryChecker;
-import me.schaertl.halina.storage.RemoteDictionaryMeta;
-import me.schaertl.halina.storage.Toaster;
+import me.schaertl.halina.remote.RemoteDictionaryMeta;
+import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.support.FileSizeFormatter;
 import me.schaertl.halina.support.Result;
 
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity implements RemoteDictionaryHandler {
     private Preference checkForDictionariesPreference;
     private Preference downloadNewDictionaryPreference;
 
@@ -41,6 +48,13 @@ public class SettingsActivity extends AppCompatActivity {
         // Load settings fragment.
         final FragmentManager fragmentManger = getSupportFragmentManager();
         fragmentManger.beginTransaction().replace(R.id.settings, new ClickableSettingsFragment(this)).commit();
+
+        // Get the associated service ready.
+        final Intent next = new Intent(this, RemoteDictionaryService.class);
+        this.startService(next);
+
+        // Set up handlers for the service.
+        RemoteDictionaryService.registerHandlerFrom(this);
     }
 
     @Override
@@ -56,54 +70,85 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
-        // Register handler for updated meta information.
-        final IntentFilter remoteDictionaryCheckerFilter = new IntentFilter(RemoteDictionaryChecker.INTENT_ACTION);
-        this.registerReceiver(onRemoteDictionaryChecker, remoteDictionaryCheckerFilter);
     }
 
     @Override
     protected void onDestroy() {
-        // Unregister all broadcast handlers.
-        this.unregisterReceiver(onRemoteDictionaryChecker);
+        final Intent remoteDictionaryService = new Intent(this, RemoteDictionaryService.class);
+        this.stopService(remoteDictionaryService);
 
         super.onDestroy();
     }
 
-    private final BroadcastReceiver onRemoteDictionaryChecker = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final Result<RemoteDictionaryMeta> result = RemoteDictionaryChecker.getResultsFor(intent);
-
-            if (result.isError()) {
-                final String summary = String.format("Error: %s", result.getErrorMessage());
-
-                runOnUiThread(() -> {
-                    downloadNewDictionaryPreference.setVisible(false);
-                    checkForDictionariesPreference.setSummary(summary);
-                });
-            } else {
-                final RemoteDictionaryMeta meta = result.getResult();
-                final String nbytes = FileSizeFormatter.format(meta.nbytes);
-                final String summary = String.format("%s (%S)", meta.version, nbytes);
-
-                runOnUiThread(() -> {
-                    downloadNewDictionaryPreference.setVisible(true);
-                    checkForDictionariesPreference.setSummary(summary);
-                });
-            }
-        }
-    };
-
-    private void onCheckForNewDictionaryClicked() {
-        final Thread checker = new RemoteDictionaryChecker(this.getApplicationContext());
-        checker.start();
-
-        Toaster.toastFrom(this, "checking for new dictionary...");
+    @Override
+    public synchronized void onNewMeta(RemoteDictionaryMeta meta) {
+        runOnUiThread(() -> {
+            Toaster.toastFrom(SettingsActivity.this, "found dictionary to download");
+            final String nbytes = FileSizeFormatter.format(meta.nbytes);
+            final String summary = String.format("%s (%s)", meta.version, nbytes);
+            downloadNewDictionaryPreference.setSummary(summary);
+            downloadNewDictionaryPreference.setVisible(true);
+        });
     }
 
-    private void onDownloadNewDictionaryClicked() {
-        throw new NotImplementedException();
+    @Override
+    public synchronized void onNewMetaFailed(String errorMessage) {
+        runOnUiThread(() -> {
+            final String message = String.format("error: could not determine new dictionary: %s", errorMessage);
+            Toaster.toastFrom(this, message);
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary("");
+        });
+    }
+
+    @SuppressLint("DefaultLocale")
+    @Override
+    public synchronized void onInstallProgress(String url, Phase phase, Progress progress) {
+        final String message = phase.format(progress);
+
+        runOnUiThread(() -> {
+            this.downloadNewDictionaryPreference.setSummary(message);
+        });
+    }
+
+    @Override
+    public synchronized void onInstallCompleted(String fileLocation) {
+        runOnUiThread(() -> {
+            this.downloadNewDictionaryPreference.setSummary(fileLocation);
+        });
+    }
+
+    @Override
+    public synchronized void onInstallFailed(String errorMessage) {
+        final String message = "Install Failed: " + errorMessage;
+
+        runOnUiThread(() -> {
+            this.downloadNewDictionaryPreference.setSummary(message);
+        });
+    }
+
+    private synchronized void onCheckForNewDictionaryClicked() {
+        final Optional<RemoteDictionaryService> service = RemoteDictionaryService.getInstance();
+
+        if (service.isPresent()) {
+            Toaster.toastFrom(this, "checking for new dictionary...");
+            service.get().startNewMetaDownload();
+        }
+    }
+
+    private synchronized void onDownloadNewDictionaryClicked() {
+        final Optional<RemoteDictionaryService> service = RemoteDictionaryService.getInstance();
+
+        if (service.isPresent()) {
+            // WIR LEBEN ALLE IN DER GOSSE
+            // UND VOLLER STERNE
+            // IST DIE WELT
+            final String hardCodedUrl = "https://halina.schaertl.me/dictionaries/enwiktionary-latest-pages-articles.sqlite3.gz";
+
+            Toaster.toastFrom(this, "downloading new dictionary...");
+            service.get().startNewDownloadFrom(hardCodedUrl);
+        }
     }
 
     public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
