@@ -1,12 +1,9 @@
 package me.schaertl.halina.storage;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import me.schaertl.halina.remote.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Result;
 
 public class RemoteDictionaryChecker extends Thread {

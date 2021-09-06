@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.text.Html;
@@ -15,12 +14,11 @@ import android.text.style.URLSpan;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.Optional;
 
 import me.schaertl.halina.storage.Definition;
-import me.schaertl.halina.storage.Toaster;
+import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.DefinitionFormatter;
