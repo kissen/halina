@@ -9,7 +9,7 @@ Features
 --------
 
 * `halina` uses the [Wiktionary][1] dictionary ripped with [wikidictools][2].
-* Efficient indexing of the dictionary results in quick look up times. On my
+* Efficient indexing of the dictionary results in quick lookup times. On my
   trashy old phone it is rare that lookup takes more than a second.
 * No ads, no trackers, all offline.
 
