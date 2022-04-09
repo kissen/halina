@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONObject;
 
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
+import me.schaertl.halina.support.Fs;
 import me.schaertl.halina.support.Result;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -93,9 +95,9 @@ public class Http {
                 throw new IllegalStateException(errorMessage);
             }
 
-            try (final FileWriter writer = new FileWriter(tempFile.toString(), true)) {
+            try (final FileOutputStream file = new FileOutputStream(tempFile.toString())) {
                 final InputStream rx = response.body().byteStream();
-                IOUtils.copy(rx, writer, Charset.defaultCharset());
+                IOUtils.copy(rx, file);
             }
         }
 

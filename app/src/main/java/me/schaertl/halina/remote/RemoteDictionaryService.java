@@ -1,6 +1,7 @@
 package me.schaertl.halina.remote;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 
@@ -8,19 +9,25 @@ import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipException;
 
+import me.schaertl.halina.storage.Storage;
+import me.schaertl.halina.support.Fs;
+import me.schaertl.halina.support.Gzip;
 import me.schaertl.halina.support.Result;
 
 public class RemoteDictionaryService extends Service {
     private static volatile RemoteDictionaryService instance;
-    private static List<RemoteDictionaryHandler> listeners;
-
-    static {
-        listeners = new ArrayList<>();
-    }
+    private final static List<RemoteDictionaryHandler> listeners = new ArrayList<>();
 
     public static Optional<RemoteDictionaryService> getInstance() {
         return Optional.ofNullable(instance);
@@ -163,6 +170,21 @@ public class RemoteDictionaryService extends Service {
 
         @Override
         public void run() {
+            try {
+                this.doUpdate();
+            } catch (Exception e) {
+                ifLatest(() -> distributeInstallFailed(e.toString()));
+            }
+        }
+
+        @Override
+        public void onProgress(Progress currentProgress) {
+            ifLatest(() -> distributeInstallProgress(this.url, Phase.DOWNLOADING, currentProgress));
+        }
+
+        private void doUpdate() throws Exception {
+            // (1) First download the image from the Halina server.
+
             final Result<String> fileLocationResult = Http.downloadToTempDirectory(url, this);
 
             if (fileLocationResult.isError()) {
@@ -171,15 +193,35 @@ public class RemoteDictionaryService extends Service {
                 return;
             }
 
-            // TODO: Check archive, install as dictionary.
+            // (2) We distribute dictionaries as GZIP-ed files. Here we unzip that file. If
+            // unzipping failed, the file is probably corrupt.
 
-            final String fileLocation = fileLocationResult.getResult();
-            ifLatest(() -> distributeInstallCompleted(fileLocation));
-        }
+            final String gzipFileLocation = fileLocationResult.getResult();
 
-        @Override
-        public void onProgress(Progress currentProgress) {
-            ifLatest(() -> distributeInstallProgress(this.url, Phase.DOWNLOADING, currentProgress));
+            final String dictDir = Fs.createTempDirectory("halina");
+            final String sqlite3FileLocation = Fs.join(dictDir, "dictionary.sqlite3");
+
+            ifLatest(() -> distributeInstallProgress(this.url, Phase.EXTRACTING, null));
+            Gzip.extract(gzipFileLocation, sqlite3FileLocation);
+
+            // (3) Now that we have extracted the GZIP file, we can delete the compressed file
+            // as we do not need it anymore. We really should do this as early as possible as
+            // the files can get quite big for mobile devices.
+
+            Fs.delete(gzipFileLocation);
+
+            // (4) Now that we have extracted the file, we need to pass it to the storage
+            // backend for installation.
+
+            final Context context = instance.getApplicationContext();
+
+            ifLatest(() -> distributeInstallProgress(this.url, Phase.VALIDATING, null));
+            Storage.installNewDictionary(context, sqlite3FileLocation);
+
+            // (5) Success. Now it is time to rejoice, thank your parents, partner, friends
+            // and party hard!
+
+            ifLatest(() -> distributeInstallCompleted(sqlite3FileLocation));
         }
 
         private void ifLatest(Runnable action) {

@@ -4,7 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Path;
+import android.database.sqlite.SQLiteOpenHelper;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -142,12 +142,7 @@ public class Wiktionary {
     }
 
     private static synchronized SQLiteDatabase getDatabaseFor(Context context) {
-        try {
-            final DatabaseHelper helper = new DatabaseHelper(context);
-            helper.ensureImported();
-            return helper.getReadableDatabase();
-        } catch (IOException e) {
-            throw new Error("accessing underlying dictionary storage failed", e);
-        }
+        final DatabaseOpenHelper helper = new DatabaseOpenHelper(context);
+        return helper.getReadableDatabase();
     }
 }

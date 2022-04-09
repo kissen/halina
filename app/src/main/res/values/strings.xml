@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Halina</string>
     <string name="app_version">0.1</string>
-    <item name="database_version" format="integer" type="string">8</item>
     <string name="title_activity_settings">SettingsActivity</string>
 </resources>

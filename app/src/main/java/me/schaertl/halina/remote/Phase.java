@@ -5,9 +5,14 @@ import android.annotation.SuppressLint;
 public enum Phase {
     QUEUED, DOWNLOADING, EXTRACTING, VALIDATING;
 
+    @SuppressLint("DefaultLocale")
     public String format(Progress progress) {
+        if (progress == null) {
+            return this.prefix();
+        }
+
         final String name = this.prefix();
-        final int percent = (int) progress.percent();
+        final int percent = Math.round(progress.percent());
 
         return String.format("%s (%d%%)", name, percent);
     }
