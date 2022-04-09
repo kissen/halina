@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import me.schaertl.halina.storage.Definition;
+import me.schaertl.halina.storage.structs.Definition;
 
 public class DefinitionFormatter {
     private final static String REGEX = "\\[\\[(.*?)\\]\\]";

@@ -17,7 +17,7 @@ import android.widget.TextView;
 
 import java.util.Optional;
 
-import me.schaertl.halina.storage.Definition;
+import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
@@ -69,9 +69,6 @@ public class ViewEntryActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private void onLinkClicked(String addr) {
     }
 
     private void showToast(String message) {

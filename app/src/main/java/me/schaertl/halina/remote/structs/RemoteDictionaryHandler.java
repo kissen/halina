@@ -1,4 +1,6 @@
-package me.schaertl.halina.remote;
+package me.schaertl.halina.remote.structs;
+
+import me.schaertl.halina.remote.RemoteDictionaryMeta;
 
 public interface RemoteDictionaryHandler {
     void onNewMeta(RemoteDictionaryMeta meta);

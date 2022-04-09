@@ -3,7 +3,7 @@
   Seriously why am I writing Java, this is so bad?!
  */
 
-package me.schaertl.halina.remote;
+package me.schaertl.halina.support;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -12,17 +12,15 @@ import org.apache.commons.io.IOUtils;
 import org.json.JSONObject;
 
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
-import me.schaertl.halina.support.Fs;
-import me.schaertl.halina.support.Result;
+import me.schaertl.halina.remote.structs.Progress;
+import me.schaertl.halina.remote.structs.ProgressHandler;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;

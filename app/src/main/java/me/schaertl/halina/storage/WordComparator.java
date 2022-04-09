@@ -4,6 +4,8 @@ import org.apache.commons.text.similarity.LevenshteinDistance;
 
 import java.util.Comparator;
 
+import me.schaertl.halina.storage.structs.Word;
+
 public class WordComparator implements Comparator<Word> {
     private final String query;
     private final LevenshteinDistance levenshteinDistance;

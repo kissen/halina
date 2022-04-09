@@ -3,7 +3,6 @@ package me.schaertl.halina;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -13,7 +12,7 @@ import android.widget.SearchView;
 
 import java.util.List;
 
-import me.schaertl.halina.storage.Word;
+import me.schaertl.halina.storage.structs.Word;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.WordListAdapter;
