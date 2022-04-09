@@ -4,13 +4,14 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import me.schaertl.halina.storage.structs.Definition;
+import me.schaertl.halina.storage.structs.Word;
 
 public class Wiktionary {
     private Wiktionary() {}

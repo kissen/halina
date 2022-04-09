@@ -1,4 +1,4 @@
-package me.schaertl.halina.storage;
+package me.schaertl.halina.storage.structs;
 
 public class Word {
     public final int id;

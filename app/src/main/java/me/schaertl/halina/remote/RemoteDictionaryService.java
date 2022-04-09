@@ -9,20 +9,18 @@ import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.ZipException;
 
+import me.schaertl.halina.remote.structs.Phase;
+import me.schaertl.halina.remote.structs.Progress;
+import me.schaertl.halina.remote.structs.ProgressHandler;
+import me.schaertl.halina.remote.structs.RemoteDictionaryHandler;
 import me.schaertl.halina.storage.Storage;
 import me.schaertl.halina.support.Fs;
 import me.schaertl.halina.support.Gzip;
+import me.schaertl.halina.support.Http;
 import me.schaertl.halina.support.Result;
 
 public class RemoteDictionaryService extends Service {

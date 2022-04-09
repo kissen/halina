@@ -1,4 +1,4 @@
-package me.schaertl.halina.storage;
+package me.schaertl.halina.storage.structs;
 
 import java.util.ArrayList;
 import java.util.Collections;

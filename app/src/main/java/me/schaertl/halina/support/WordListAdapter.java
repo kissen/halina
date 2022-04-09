@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import me.schaertl.halina.storage.Word;
+import me.schaertl.halina.storage.structs.Word;
 
 public class WordListAdapter extends ArrayAdapter<String> {
     private final List<Word> words;

@@ -1,10 +1,7 @@
 package me.schaertl.halina;
 
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
 import android.view.MenuItem;
 
@@ -16,9 +13,9 @@ import androidx.preference.PreferenceFragmentCompat;
 
 import java.util.Optional;
 
-import me.schaertl.halina.remote.Phase;
-import me.schaertl.halina.remote.Progress;
-import me.schaertl.halina.remote.RemoteDictionaryHandler;
+import me.schaertl.halina.remote.structs.Phase;
+import me.schaertl.halina.remote.structs.Progress;
+import me.schaertl.halina.remote.structs.RemoteDictionaryHandler;
 import me.schaertl.halina.remote.RemoteDictionaryService;
 import me.schaertl.halina.remote.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Toaster;

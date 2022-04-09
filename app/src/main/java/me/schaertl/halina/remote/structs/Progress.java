@@ -1,4 +1,4 @@
-package me.schaertl.halina.remote;
+package me.schaertl.halina.remote.structs;
 
 public class Progress {
     public final long createdOn;
