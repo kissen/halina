@@ -7,9 +7,15 @@ public enum Phase {
 
     @SuppressLint("DefaultLocale")
     public String format(Progress progress) {
+        // If we don't have any progress information, we simply only print the string.
+        // This can happen in situations where operations are fairly quick and as such
+        // I was too lazy to implement an update/progress mechanism.
+
         if (progress == null) {
-            return this.prefix();
+            return String.format("%s...", this.prefix());
         }
+
+        // I guess we do have a progress. Here we format it as a percentage.
 
         final String name = this.prefix();
         final int percent = Math.round(progress.percent());
