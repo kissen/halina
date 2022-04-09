@@ -7,21 +7,23 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import org.apache.commons.lang3.NotImplementedException;
 
-import java.util.concurrent.locks.Lock;
-
+import me.schaertl.halina.storage.exceptions.DatabaseException;
+import me.schaertl.halina.storage.exceptions.NoDatabaseException;
 import me.schaertl.halina.support.Guard;
 
 public class DatabaseOpenHelper extends SQLiteOpenHelper {
     @SuppressLint("ResourceType")
-    public DatabaseOpenHelper(Context context) {
+    public DatabaseOpenHelper(Context context) throws DatabaseException {
         super(context, Storage.DB_NAME, null, 10);
+
+        if (!Storage.haveDatabase(context)) {
+            throw new NoDatabaseException("missing database file");
+        }
     }
 
     @Override
     public void onOpen(SQLiteDatabase db) {
-        final Lock lock = Storage.getLock();
-
-        try (final Guard guard = new Guard(lock)) {
+        try (final Guard guard = Storage.guard()) {
             super.onOpen(db);
         }
     }
