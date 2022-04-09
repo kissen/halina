@@ -16,7 +16,7 @@ public class Progress {
             return 0;
         }
 
-        if (this.completedSteps == this.totalSteps) {
+        if (this.completedSteps >= this.totalSteps) {
             return 100;
         }
 
