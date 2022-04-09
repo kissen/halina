@@ -14,19 +14,15 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
-import org.apache.commons.lang3.NotImplementedException;
-
 import java.util.Optional;
 
 import me.schaertl.halina.remote.Phase;
 import me.schaertl.halina.remote.Progress;
 import me.schaertl.halina.remote.RemoteDictionaryHandler;
 import me.schaertl.halina.remote.RemoteDictionaryService;
-import me.schaertl.halina.storage.RemoteDictionaryChecker;
 import me.schaertl.halina.remote.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.support.FileSizeFormatter;
-import me.schaertl.halina.support.Result;
 
 public class SettingsActivity extends AppCompatActivity implements RemoteDictionaryHandler {
     private Preference checkForDictionariesPreference;
