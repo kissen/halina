@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import java.util.Optional;
 
+import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.storage.Wiktionary;
@@ -119,6 +120,14 @@ public class ViewEntryActivity extends AppCompatActivity {
 
         @Override
         public void run() {
+            try {
+                runThrowing();
+            } catch (DatabaseException e) {
+                // TODO
+            }
+        }
+
+        private void runThrowing() throws DatabaseException {
             final Optional<Definition> boxed;
 
             // If the wordId is unknown it is set to -1. In that case we have

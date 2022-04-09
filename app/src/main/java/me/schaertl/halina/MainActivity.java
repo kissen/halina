@@ -4,17 +4,24 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.text.Html;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ListView;
 import android.widget.SearchView;
+import android.widget.TextView;
 
 import java.util.List;
 
+import me.schaertl.halina.storage.Storage;
+import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Word;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
+import me.schaertl.halina.support.Res;
+import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.support.WordListAdapter;
 
 public class MainActivity extends AppCompatActivity {
@@ -28,11 +35,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Set up Activity.
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         // Set up event handler for list items.
+
         final ListView candidatesList = findViewById(R.id.list_main);
+
         candidatesList.setOnItemClickListener((av, v, pos, l) -> {
             final Object adapter = av.getAdapter();
             if (adapter instanceof WordListAdapter) {
@@ -41,6 +51,25 @@ public class MainActivity extends AppCompatActivity {
                 Caller.callViewActivityFrom(MainActivity.this, word.word, word.id);
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // Configure warning about installing Halina dictionary. Really what should be
+        // happening is that a dictionary is automatically installed. For now I haven't
+        // implemented that however.
+
+        final TextView warningText = findViewById(R.id.text_warning);
+
+        if (Storage.haveDatabase(getApplicationContext())) {
+            warningText.setVisibility(View.GONE);
+            return;
+        }
+
+        final String warningHtml = Res.loadAsString(this, R.raw.welcome_message);
+        warningText.setText(Html.fromHtml(warningHtml, 0));
     }
 
     @Override
@@ -130,6 +159,12 @@ public class MainActivity extends AppCompatActivity {
          */
         private final long startedAt;
 
+        /**
+         * Construct new finder.
+         *
+         * @param query The string entered by the user into the search bar.
+         * @param context Application context.
+         */
         public ResultFinder(String query, Context context) {
             this.parentContext = context;
             this.query = query;
@@ -138,8 +173,13 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
-            updateListWith(entries, this.startedAt);
+            try {
+                final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
+                updateListWith(entries, this.startedAt);
+            } catch (DatabaseException e) {
+                final String msg = "Missing dictionary. Install one in Settings.";
+                Toaster.toastFrom(MainActivity.this, msg);
+            }
         }
     }
 }

@@ -108,7 +108,7 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
     @Override
     public synchronized void onInstallCompleted(String fileLocation) {
         runOnUiThread(() -> {
-            this.downloadNewDictionaryPreference.setSummary(fileLocation);
+            this.downloadNewDictionaryPreference.setSummary("Installed!");
         });
     }
 

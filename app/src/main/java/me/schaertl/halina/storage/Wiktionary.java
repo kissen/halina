@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import me.schaertl.halina.storage.exceptions.DatabaseException;
+import me.schaertl.halina.storage.exceptions.NoDatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.structs.Word;
 
@@ -20,7 +22,7 @@ public class Wiktionary {
      * Given query string, return a list of possible candidates the user
      * may be interested in.
      */
-    public static List<Word> lookUpChoicesFor(String query, Context context) {
+    public static List<Word> lookUpChoicesFor(String query, Context context) throws DatabaseException {
         if (query.trim().isEmpty()) {
             return Collections.emptyList();
         }
@@ -35,7 +37,7 @@ public class Wiktionary {
     /**
      * Given query string, return the definition for given id.
      */
-    public static Optional<Definition> lookUpDefinitionFor(int wordId, Context context) {
+    public static Optional<Definition> lookUpDefinitionFor(int wordId, Context context) throws DatabaseException {
         try (SQLiteDatabase db = getDatabaseFor(context)) {
             return queryDefinitionFor(wordId, db);
         }
@@ -44,7 +46,7 @@ public class Wiktionary {
     /**
      * Given query string, return the definition for given word.
      */
-    public static Optional<Definition> lookUpDefinitionFor(String word, Context contenxt) {
+    public static Optional<Definition> lookUpDefinitionFor(String word, Context contenxt) throws DatabaseException {
         try (SQLiteDatabase db = getDatabaseFor(contenxt)) {
             return queryDefinitionFor(word, db);
         }
@@ -142,7 +144,7 @@ public class Wiktionary {
         }
     }
 
-    private static synchronized SQLiteDatabase getDatabaseFor(Context context) {
+    private static synchronized SQLiteDatabase getDatabaseFor(Context context) throws DatabaseException {
         final DatabaseOpenHelper helper = new DatabaseOpenHelper(context);
         return helper.getReadableDatabase();
     }
