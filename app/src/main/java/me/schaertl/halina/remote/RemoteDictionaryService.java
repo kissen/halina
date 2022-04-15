@@ -9,10 +9,6 @@ import androidx.annotation.NonNull;
 
 import org.json.JSONObject;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
 import me.schaertl.halina.remote.structs.Phase;
 import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.structs.ProgressHandler;
@@ -23,55 +19,35 @@ import me.schaertl.halina.support.Gzip;
 import me.schaertl.halina.support.Http;
 import me.schaertl.halina.support.Result;
 
+/**
+ * Background service that can be used to (1) query a backend server for new dictionaries and
+ * (2) download and install such a new dictionary.
+ */
 public class RemoteDictionaryService extends Service {
-    private static volatile RemoteDictionaryService instance;
-    private final static List<RemoteDictionaryHandler> listeners = new ArrayList<>();
-
-    public static Optional<RemoteDictionaryService> getInstance() {
-        return Optional.ofNullable(instance);
-    }
-
-    public RemoteDictionaryService() {
-        super();
-    }
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        instance = this;
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        instance = null;
-        super.onDestroy();
-    }
+    //
+    // Android Service Event Handlers
+    //
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    public static synchronized void registerHandlerFrom( RemoteDictionaryHandler handler) {
-        if (!listeners.contains(handler)) {
-            listeners.add(handler);
-        }
+        return new RemoteDictionaryServiceBinder(this);
     }
 
     public void startNewMetaDownload() {
-        final Thread worker = new MetaChecker();
+        final Thread worker = new MetaDownloadTask();
         worker.start();
     }
 
     public void startNewDownloadFrom(@NonNull String url) {
-        final Thread worker = new DictionaryDownloader(url);
+        final Thread worker = new DictionaryInstallTask(url);
         worker.start();
     }
+
+    //
+    // Custom Event Handlers.
+    //
+    // These get called by the various worker threads.
+    //
 
     private static synchronized void distributeNewMeta(RemoteDictionaryMeta meta) {
         for (final RemoteDictionaryHandler handler : listeners) {
@@ -103,15 +79,12 @@ public class RemoteDictionaryService extends Service {
         }
     }
 
-    private static class MetaChecker extends Thread {
+    /**
+     * Tasks that fetches JSON meta data from a backend server.
+     * The meta data data contains information about available dictionaries.
+     */
+    private static class MetaDownloadTask extends Thread {
         private static final String REMOTE_ADDR = "https://halina.schaertl.me/dictionaries/halina-meta.json";
-        private static long lastUpdatedAt;
-
-        private final long startedAt;
-
-        public MetaChecker() {
-            this.startedAt = System.currentTimeMillis();
-        }
 
         @Override
         public void run() {
@@ -121,7 +94,7 @@ public class RemoteDictionaryService extends Service {
 
             if (metaJson.isError()) {
                 final String errorMessage = metaJson.getErrorMessage();
-                ifLatest(() -> distributeNewMetaFailed(errorMessage));
+                distributeNewMetaFailed(errorMessage);
                 return;
             }
 
@@ -133,37 +106,32 @@ public class RemoteDictionaryService extends Service {
 
             if (metaObj.isError()) {
                 final String errorMessage = metaObj.getErrorMessage();
-                ifLatest(() -> distributeNewMetaFailed(errorMessage));
+                distributeNewMetaFailed(errorMessage);
                 return;
             }
 
             // Well that worked! Great!
 
             final RemoteDictionaryMeta meta = metaObj.getResult();
-            ifLatest(() -> distributeNewMeta(meta));
-        }
-
-        private void ifLatest(Runnable action) {
-            synchronized (MetaChecker.class) {
-                if (lastUpdatedAt < this.startedAt) {
-                    action.run();
-                    lastUpdatedAt = this.startedAt;
-                }
-            }
+            distributeNewMeta(meta);
         }
     }
 
-    private static class DictionaryDownloader extends Thread implements ProgressHandler {
-        private static long lastUpdatedAt;
+    /**
+     * Tasks that downloads, extracts and installs a new dictionary file.
+     */
+    private static class DictionaryInstallTask extends Thread implements ProgressHandler {
+        /** Context of caller. */
+        private final Context context;
 
+        /** URL to download the GZIP from. */
         private final String url;
-        private final long startedAt;
 
-        public DictionaryDownloader(String url) {
+        public DictionaryInstallTask(Context context, String url) {
             super();
 
+            this.context = context;
             this.url = url;
-            this.startedAt = System.currentTimeMillis();
         }
 
         @Override
@@ -171,13 +139,13 @@ public class RemoteDictionaryService extends Service {
             try {
                 this.doUpdate();
             } catch (Exception e) {
-                ifLatest(() -> distributeInstallFailed(e.toString()));
+                distributeInstallFailed(e.toString());
             }
         }
 
         @Override
         public void onProgress(Progress currentProgress) {
-            ifLatest(() -> distributeInstallProgress(this.url, Phase.DOWNLOADING, currentProgress));
+            distributeInstallProgress(this.url, Phase.DOWNLOADING, currentProgress);
         }
 
         private void doUpdate() throws Exception {
@@ -187,7 +155,7 @@ public class RemoteDictionaryService extends Service {
 
             if (fileLocationResult.isError()) {
                 final String errorMessage = fileLocationResult.getErrorMessage();
-                ifLatest(() -> distributeInstallFailed(errorMessage));
+                distributeInstallFailed(errorMessage);
                 return;
             }
 
@@ -199,7 +167,7 @@ public class RemoteDictionaryService extends Service {
             final String dictDir = Fs.createTempDirectory("halina");
             final String sqlite3FileLocation = Fs.join(dictDir, "dictionary.sqlite3");
 
-            ifLatest(() -> distributeInstallProgress(this.url, Phase.EXTRACTING, null));
+            distributeInstallProgress(this.url, Phase.EXTRACTING, null);
             Gzip.extract(gzipFileLocation, sqlite3FileLocation);
 
             // (3) Now that we have extracted the GZIP file, we can delete the compressed file
@@ -211,22 +179,13 @@ public class RemoteDictionaryService extends Service {
             // (4) Now that we have extracted the file, we need to pass it to the storage
             // backend for installation.
 
-            final Context context = instance.getApplicationContext();
-
-            ifLatest(() -> distributeInstallProgress(this.url, Phase.VALIDATING, null));
+            distributeInstallProgress(this.url, Phase.VALIDATING, null);
             Storage.installNewDictionary(context, sqlite3FileLocation);
 
             // (5) Success. Now it is time to rejoice, thank your parents, partner, friends
             // and party hard!
 
-            ifLatest(() -> distributeInstallCompleted(sqlite3FileLocation));
-        }
-
-        private void ifLatest(Runnable action) {
-            synchronized (DictionaryDownloader.class) {
-                action.run();
-                lastUpdatedAt = this.startedAt;
-            }
+            distributeInstallCompleted(sqlite3FileLocation);
         }
     }
 }
