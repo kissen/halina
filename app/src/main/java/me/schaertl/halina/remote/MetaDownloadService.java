@@ -17,7 +17,7 @@ public class MetaDownloadService extends Service {
     // Constants.
     //
 
-    public static String BROADCAST_FILTER = "MetaDownloadService#BroadcastFilter";
+    public static String BROADCAST_FILTER = "MetaDownloadService#BROADCAST_FILTER";
 
     //
     // Public Types.

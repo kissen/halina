@@ -5,6 +5,10 @@ public class Progress {
     private final long completedSteps;
     private final long totalSteps;
 
+    public static Progress zero() {
+        return new Progress(0, 1);  // 0%
+    }
+
     public Progress(long completedSteps, long totalSteps) {
         this.completedSteps = completedSteps;
         this.totalSteps = totalSteps;

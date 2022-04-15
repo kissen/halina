@@ -3,19 +3,16 @@ package me.schaertl.halina.remote;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.IBinder;
 
-import org.json.JSONObject;
-
-import me.schaertl.halina.remote.structs.Phase;
 import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.structs.ProgressHandler;
-import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.storage.Storage;
 import me.schaertl.halina.support.Fs;
 import me.schaertl.halina.support.Gzip;
 import me.schaertl.halina.support.Http;
-import me.schaertl.halina.support.Result;
+import me.schaertl.halina.support.Task;
 
 /**
  * Background service that can be used to (1) query a backend server for new dictionaries and
@@ -23,152 +20,179 @@ import me.schaertl.halina.support.Result;
  */
 public class DictionaryInstallService extends Service {
     //
-    // Android Service Event Handlers
+    // Constants.
+    //
+
+    public static String BROADCAST_FILTER = "DictionaryInstallService#BROADCAST_FILTER";
+
+    //
+    // Public Types.
+    //
+
+    public enum State {
+        READY,
+        PREPARING,
+        DOWNLOADING,
+        EXTRACTING,
+        INSTALLING,
+        INSTALLED,
+        ERROR
+    }
+
+    public class DictionaryInstallBinder extends Binder {
+        public DictionaryInstallService getService() {
+            return DictionaryInstallService.this;
+        }
+    }
+
+    public static class Report {
+        public final State state;
+        public final Exception error;
+        public final Progress progress;
+
+        public Report(State state, Exception error, Progress progress) {
+            this.state = state;
+            this.error = error;
+            this.progress = progress;
+        }
+    }
+
+    //
+    // Variables.
+    //
+
+    private State state;
+    private Exception error;
+    private InstallTask task;
+    private Progress progress;
+
+    //
+    // Constructor.
+    //
+
+    public DictionaryInstallService() {
+        super();
+        state = State.READY;
+    }
+
+    //
+    // Android Lifetime.
     //
 
     @Override
     public IBinder onBind(Intent intent) {
-        return new RemoteDictionaryServiceBinder(this);
-    }
-
-    public void startNewMetaDownload() {
-        final Thread worker = new MetaDownloadTask();
-        worker.start();
-    }
-
-    public void startNewDownloadFrom(String url, Context context) {
-        final Thread worker = new DictionaryInstallTask(context, url);
-        worker.start();
+        return new DictionaryInstallBinder();
     }
 
     //
-    // Custom Event Handlers.
-    //
-    // These get called by the various worker threads.
+    // Getters.
     //
 
-    private static synchronized void distributeNewMeta(RemoteDictionaryMeta meta) {
+    public synchronized Report getReport() {
+        return new Report(state, error, progress);
     }
 
-    private static synchronized void distributeNewMetaFailed(String errorMessage) {
-    }
+    //
+    // State Management.
+    //
 
-    private static synchronized void distributeInstallProgress(String url, Phase phase, Progress progress) {
-    }
-
-    private static synchronized void distributeInstallCompleted(String fileLocation) {
-    }
-
-    private static synchronized void distributeInstallFailed(String errorMessage) {
-    }
-
-    /**
-     * Tasks that fetches JSON meta data from a backend server.
-     * The meta data data contains information about available dictionaries.
-     */
-    private static class MetaDownloadTask extends Thread {
-        private static final String REMOTE_ADDR = "https://halina.schaertl.me/dictionaries/halina-meta.json";
-
-        @Override
-        public void run() {
-            // First we have to download the JSON.
-
-            final Result<JSONObject> metaJson = Http.getJson(REMOTE_ADDR);
-
-            if (metaJson.isError()) {
-                final String errorMessage = metaJson.getErrorMessage();
-                distributeNewMetaFailed(errorMessage);
-                return;
-            }
-
-            // Now that we have the JSON, we can extract the meta information
-            // from it.
-
-            final JSONObject json = metaJson.getResult();
-            final Result<RemoteDictionaryMeta> metaObj = RemoteDictionaryMeta.from(json);
-
-            if (metaObj.isError()) {
-                final String errorMessage = metaObj.getErrorMessage();
-                distributeNewMetaFailed(errorMessage);
-                return;
-            }
-
-            // Well that worked! Great!
-
-            final RemoteDictionaryMeta meta = metaObj.getResult();
-            distributeNewMeta(meta);
+    public synchronized void installNewDictionary(Context context, String gzipUrl) {
+        if (task != null) {
+            return;
         }
+
+        this.state = State.PREPARING;
+        this.error = null;
+        this.progress = null;
+
+        this.task = new InstallTask(context, gzipUrl);
+        this.task.start();
+
+        triggerBroadcast();
+    }
+
+    private synchronized void setError(Exception cause) {
+        this.state = State.ERROR;
+        this.error = cause;
+        this.progress = null;
+        this.task = null;
+
+        triggerBroadcast();
+    }
+
+    private synchronized void setProgress(State state, Progress progress) {
+        this.state = state;
+        this.error = null;
+        this.progress = progress;
+
+        triggerBroadcast();
+    }
+
+    private synchronized void triggerBroadcast() {
+        final Intent intent = new Intent(BROADCAST_FILTER);
+        sendBroadcast(intent);
     }
 
     /**
      * Tasks that downloads, extracts and installs a new dictionary file.
      */
-    private static class DictionaryInstallTask extends Thread implements ProgressHandler {
-        /** Context of caller. */
+    private class InstallTask extends Task implements ProgressHandler {
         private final Context context;
+        private final String downloadUrl;
+        private final DictionaryInstallService parent;
 
-        /** URL to download the GZIP from. */
-        private final String url;
-
-        public DictionaryInstallTask(Context context, String url) {
+        public InstallTask(Context context, String downloadUrl) {
             super();
 
             this.context = context;
-            this.url = url;
+            this.downloadUrl = downloadUrl;
+            this.parent = DictionaryInstallService.this;
         }
 
         @Override
-        public void run() {
-            try {
-                this.doUpdate();
-            } catch (Exception e) {
-                distributeInstallFailed(e.toString());
-            }
+        public void execute() throws Exception {
+            final String gzipFile = downloadFile(this.downloadUrl);
+            final String sqlite3File = extract(gzipFile);
+            install(sqlite3File);
+
+            setProgress(DictionaryInstallService.State.INSTALLED, null);
+        }
+
+        @Override
+        public void on(Exception e) {
+            setError(e);
         }
 
         @Override
         public void onProgress(Progress currentProgress) {
-            distributeInstallProgress(this.url, Phase.DOWNLOADING, currentProgress);
+            synchronized (parent) {
+                setProgress(state, currentProgress);
+            }
         }
 
-        private void doUpdate() throws Exception {
-            // (1) First download the image from the Halina server.
+        /**
+         * Download file at url to temporary directory. Returns the file location.
+         */
+        private String downloadFile(String url) throws Exception {
+            setProgress(DictionaryInstallService.State.DOWNLOADING, Progress.zero());
+            return Http.downloadToTempDirectory(url, this).get();
+        }
 
-            final Result<String> fileLocationResult = Http.downloadToTempDirectory(url, this);
+        /**
+         * Extract GZIP file at path to temporary directory. Returns file location.
+         */
+        private String extract(String gzipFile) throws Exception {
+            setProgress(DictionaryInstallService.State.EXTRACTING, null);
+            final String tempDir = Fs.createTempDirectory("halina");
+            final String extractedFile = Fs.join(tempDir, "dictionary.sqlite3");
+            Gzip.extract(gzipFile, extractedFile);
+            Fs.delete(gzipFile);
+            return extractedFile;
+        }
 
-            if (fileLocationResult.isError()) {
-                final String errorMessage = fileLocationResult.getErrorMessage();
-                distributeInstallFailed(errorMessage);
-                return;
-            }
-
-            // (2) We distribute dictionaries as GZIP-ed files. Here we unzip that file. If
-            // unzipping failed, the file is probably corrupt.
-
-            final String gzipFileLocation = fileLocationResult.getResult();
-
-            final String dictDir = Fs.createTempDirectory("halina");
-            final String sqlite3FileLocation = Fs.join(dictDir, "dictionary.sqlite3");
-
-            distributeInstallProgress(this.url, Phase.EXTRACTING, null);
-            Gzip.extract(gzipFileLocation, sqlite3FileLocation);
-
-            // (3) Now that we have extracted the GZIP file, we can delete the compressed file
-            // as we do not need it anymore. We really should do this as early as possible as
-            // the files can get quite big for mobile devices.
-
-            Fs.delete(gzipFileLocation);
-
-            // (4) Now that we have extracted the file, we need to pass it to the storage
-            // backend for installation.
-
-            distributeInstallProgress(this.url, Phase.VALIDATING, null);
-            Storage.installNewDictionary(context, sqlite3FileLocation);
-
-            // (5) Success. Now it is time to rejoice, thank your parents, partner, friends
-            // and party hard!
-
-            distributeInstallCompleted(sqlite3FileLocation);
+        private void install(String sqlite3File) throws Exception {
+            setProgress(DictionaryInstallService.State.INSTALLING, null);
+            Storage.installNewDictionary(context, sqlite3File);
         }
     }
 }
