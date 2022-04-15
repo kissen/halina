@@ -25,8 +25,6 @@ import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.support.WordListAdapter;
 
 public class MainActivity extends AppCompatActivity {
-    private static String TAG = MainActivity.class.getName();
-
     /***
      * Time in ms when the list was most recently updated.
      */

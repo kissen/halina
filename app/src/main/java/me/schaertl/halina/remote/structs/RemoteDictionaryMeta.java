@@ -1,4 +1,4 @@
-package me.schaertl.halina.remote;
+package me.schaertl.halina.remote.structs;
 
 import org.json.JSONException;
 import org.json.JSONObject;
