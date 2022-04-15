@@ -1,10 +1,15 @@
 package me.schaertl.halina.remote;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
+
+import androidx.core.app.NotificationCompat;
 
 import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.structs.ProgressHandler;
@@ -24,6 +29,12 @@ public class DictionaryInstallService extends Service {
     //
 
     public static String BROADCAST_FILTER = "DictionaryInstallService#BROADCAST_FILTER";
+
+    private static final String NOTIFICATION_CHANNEL_ID = "DictionaryInstallService#NOTIFCATION_CHANNEL_ID";
+    private static final String NOTIFICATION_CHANNEL_NAME = "DictionaryInstallService";
+    private static final int NOTIFICATION_CHANNEL_IMPORTANCE = NotificationManager.IMPORTANCE_DEFAULT;
+
+    private static final int FOREGROUND_ID = 100;
 
     //
     // Public Types.
@@ -78,6 +89,34 @@ public class DictionaryInstallService extends Service {
     //
     // Android Lifetime.
     //
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        final Notification notification = getInstallNotification();
+        startForeground(FOREGROUND_ID, notification);
+
+        return START_STICKY;
+    }
+
+    private Notification getInstallNotification() {
+        createNotificationChannel();
+
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setContentTitle("Halina")
+            .setContentText("BE RIGHT BACK!");
+
+        return builder.build();
+    }
+
+    private void createNotificationChannel() {
+        final NotificationChannel channel = new NotificationChannel(
+                NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NOTIFICATION_CHANNEL_IMPORTANCE
+        );
+
+        final NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+    }
+
 
     @Override
     public IBinder onBind(Intent intent) {

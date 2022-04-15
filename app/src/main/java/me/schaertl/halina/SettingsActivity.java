@@ -73,6 +73,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Set up install service.
 
         final Intent remoteService = new Intent(this, DictionaryInstallService.class);
+        startForegroundService(remoteService);
         bindService(remoteService, installConnection, Context.BIND_AUTO_CREATE);
     }
 
