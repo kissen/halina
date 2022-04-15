@@ -309,7 +309,7 @@ public class SettingsActivity extends AppCompatActivity {
                 break;
 
             case EXTRACTING:
-                onInstallExtracting();
+                onInstallExtracting(report.progress);
                 break;
 
             case INSTALLING:
@@ -337,9 +337,13 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized void onInstallExtracting() {
+    @SuppressLint("DefaultLocale")
+    private synchronized void onInstallExtracting(Progress progress) {
+        final int percent = Math.round(progress.percent());
+        final String summary = String.format("Extracting... (%d%%)", percent);
+
         runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setSummary("Extracting...");
+            downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
     }

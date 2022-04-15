@@ -182,10 +182,10 @@ public class DictionaryInstallService extends Service {
          * Extract GZIP file at path to temporary directory. Returns file location.
          */
         private String extract(String gzipFile) throws Exception {
-            setProgress(DictionaryInstallService.State.EXTRACTING, null);
+            setProgress(DictionaryInstallService.State.EXTRACTING, Progress.zero());
             final String tempDir = Fs.createTempDirectory("halina");
             final String extractedFile = Fs.join(tempDir, "dictionary.sqlite3");
-            Gzip.extract(gzipFile, extractedFile);
+            Gzip.extract(gzipFile, extractedFile, this);
             Fs.delete(gzipFile);
             return extractedFile;
         }
