@@ -76,9 +76,10 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
     @Override
     public synchronized void onNewMeta(RemoteDictionaryMeta meta) {
         runOnUiThread(() -> {
-            Toaster.toastFrom(SettingsActivity.this, "found dictionary to download");
             final String nbytes = FileSizeFormatter.format(meta.nbytes);
             final String summary = String.format("%s (%s)", meta.version, nbytes);
+            Toaster.toastFrom(SettingsActivity.this, "found dictionary to download");
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
@@ -98,9 +99,8 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
     @SuppressLint("DefaultLocale")
     @Override
     public synchronized void onInstallProgress(String url, Phase phase, Progress progress) {
-        final String message = phase.format(progress);
-
         runOnUiThread(() -> {
+            final String message = phase.format(progress);
             this.downloadNewDictionaryPreference.setSummary(message);
         });
     }
@@ -114,9 +114,8 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
 
     @Override
     public synchronized void onInstallFailed(String errorMessage) {
-        final String message = "Install Failed: " + errorMessage;
-
         runOnUiThread(() -> {
+            final String message = "Install Failed: " + errorMessage;
             this.downloadNewDictionaryPreference.setSummary(message);
         });
     }
@@ -134,9 +133,6 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         final Optional<RemoteDictionaryService> service = RemoteDictionaryService.getInstance();
 
         if (service.isPresent()) {
-            // WIR LEBEN ALLE IN DER GOSSE
-            // UND VOLLER STERNE
-            // IST DIE WELT
             final String hardCodedUrl = "https://halina.schaertl.me/dictionaries/enwiktionary-latest-pages-articles.sqlite3.gz";
 
             Toaster.toastFrom(this, "downloading new dictionary...");

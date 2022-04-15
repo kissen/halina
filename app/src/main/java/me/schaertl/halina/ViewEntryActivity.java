@@ -19,7 +19,6 @@ import java.util.Optional;
 
 import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
-import me.schaertl.halina.support.Toaster;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.DefinitionFormatter;
@@ -72,10 +71,6 @@ public class ViewEntryActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void showToast(String message) {
-        Toaster.toastFrom(ViewEntryActivity.this, message);
-    }
-
     private void setHtmlContent(String html) {
         // Created with much help from https://stackoverflow.com/a/19989677
 
@@ -85,6 +80,7 @@ public class ViewEntryActivity extends AppCompatActivity {
         final SpannableStringBuilder builder = new SpannableStringBuilder(markup);
 
         final URLSpan[] urls = builder.getSpans(0, markup.length(), URLSpan.class);
+
         for (final URLSpan span : urls) {
             final int start = builder.getSpanStart(span);
             final int end = builder.getSpanEnd(span);
@@ -120,34 +116,25 @@ public class ViewEntryActivity extends AppCompatActivity {
 
         @Override
         public void run() {
-            try {
-                runThrowing();
-            } catch (DatabaseException e) {
-                // TODO
+            final Optional<Definition> boxed = lookUpDefinitions();
+
+            if (boxed.isPresent()) {
+                final Definition definition = boxed.get();
+                final String markup = DefinitionFormatter.format(word, definition);
+                setHtmlContent(markup);
             }
         }
 
-        private void runThrowing() throws DatabaseException {
-            final Optional<Definition> boxed;
-
-            // If the wordId is unknown it is set to -1. In that case we have
-            // to look up with just the word. It is going to be a bit slower,
-            // but it is all we have to work with.
-
-            if (ViewEntryActivity.this.wordId == -1) {
-                boxed = Wiktionary.lookUpDefinitionFor(word, context);
-            } else {
-                boxed = Wiktionary.lookUpDefinitionFor(wordId, context);
+        private Optional<Definition> lookUpDefinitions() {
+            try {
+                if (wordId <= -1) {
+                    return Wiktionary.lookUpDefinitionFor(word, context);
+                } else {
+                    return Wiktionary.lookUpDefinitionFor(wordId, context);
+                }
+            } catch (DatabaseException e) {
+                return Optional.empty();
             }
-
-            if (!boxed.isPresent()) {
-                showToast("could not find definition");
-                return;
-            }
-
-            final Definition definition = boxed.get();
-            final String markup = DefinitionFormatter.format(word, definition);
-            setHtmlContent(markup);
         }
     }
 }
