@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.ContactsContract;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
@@ -17,10 +18,14 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import java.util.Optional;
+
 import me.schaertl.halina.remote.MetaDownloadService;
-import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.DictionaryInstallService;
 import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
+import me.schaertl.halina.storage.Storage;
+import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.support.FileSizeFormatter;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -33,6 +38,7 @@ public class SettingsActivity extends AppCompatActivity {
     private boolean dictionaryInstallServiceIsBound;
     private String dictionaryInstallServiceUrl;
 
+    private Preference currentDictionaryPreference;
     private Preference checkForDictionariesPreference;
     private Preference downloadNewDictionaryPreference;
 
@@ -104,6 +110,8 @@ public class SettingsActivity extends AppCompatActivity {
         final IntentFilter installFilter = new IntentFilter(DictionaryInstallService.BROADCAST_FILTER);
         registerReceiver(installReceiver, installFilter);
         syncWithInstallService();
+
+        syncWithStorage();
     }
 
     @Override
@@ -256,6 +264,9 @@ public class SettingsActivity extends AppCompatActivity {
             // Load preferences from XML.
             setPreferencesFromResource(R.xml.preference_screen, rootKey);
 
+            // [Display current dictionary]
+            parent.currentDictionaryPreference = findPreference("preference_current_dictionary");
+
             // [Check for new dictionary]
             parent.checkForDictionariesPreference = findPreference("preference_download_meta");
             parent.checkForDictionariesSummary = parent.checkForDictionariesPreference.getSummary().toString();
@@ -271,6 +282,47 @@ public class SettingsActivity extends AppCompatActivity {
                 return false;
             });
         }
+    }
+
+    //
+    // Display Current Dictionary Info.
+    //
+
+    private synchronized void syncWithStorage() {
+        final Context context = getApplicationContext();
+
+        if (!Storage.haveDatabase(context)) {
+            currentDictionaryPreference.setVisible(false);
+            currentDictionaryPreference.setSummary("");
+            return;
+        }
+
+        // TODO: Think of a less bad interface for the database functions.
+        // Do we really need *both* Optional and Exceptions? Surely one
+        // alone would be enough...
+
+        final Optional<String> versionString;
+
+        try {
+            versionString = Wiktionary.getMeta("CreatedOn", context);
+        } catch (DatabaseException e) {
+            final String name = e.getClass().getSimpleName();
+            final String message = e.getMessage();
+            final String summary = String.format("%s: %s", name, message);
+
+            currentDictionaryPreference.setSummary(summary);
+            currentDictionaryPreference.setVisible(true);
+
+            return;
+        }
+
+        if (!versionString.isPresent()) {
+            currentDictionaryPreference.setSummary("Unknown version");  // Now that's what I call bad UX!
+            currentDictionaryPreference.setVisible(true);
+            return;
+        }
+
+        currentDictionaryPreference.setSummary(versionString.get());
     }
 
     //
@@ -377,6 +429,8 @@ public class SettingsActivity extends AppCompatActivity {
                 onInstallError(report);
                 break;
         }
+
+        syncWithStorage();
     }
 
     private synchronized void onInstallDownloading(DictionaryInstallService.Report report) {
