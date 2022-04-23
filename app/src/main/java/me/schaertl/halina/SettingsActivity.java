@@ -9,7 +9,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.provider.ContactsContract;
 import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
@@ -18,15 +17,15 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import java.util.Date;
 import java.util.Optional;
 
 import me.schaertl.halina.remote.MetaDownloadService;
 import me.schaertl.halina.remote.DictionaryInstallService;
 import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
-import me.schaertl.halina.storage.Storage;
 import me.schaertl.halina.storage.Wiktionary;
-import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.support.FileSizeFormatter;
+import me.schaertl.halina.support.RFC3399;
 
 public class SettingsActivity extends AppCompatActivity {
     private static final int BIND_DO_NOT_CREATE_AUTOMATICALLY = 0;
@@ -290,39 +289,22 @@ public class SettingsActivity extends AppCompatActivity {
 
     private synchronized void syncWithStorage() {
         final Context context = getApplicationContext();
+        final Optional<Date> installed = Wiktionary.getCreatedOn(context);
 
-        if (!Storage.haveDatabase(context)) {
-            currentDictionaryPreference.setVisible(false);
-            currentDictionaryPreference.setSummary("");
-            return;
-        }
+        if (installed.isPresent()) {
+            // We have some version installed.
 
-        // TODO: Think of a less bad interface for the database functions.
-        // Do we really need *both* Optional and Exceptions? Surely one
-        // alone would be enough...
-
-        final Optional<String> versionString;
-
-        try {
-            versionString = Wiktionary.getMeta("CreatedOn", context);
-        } catch (DatabaseException e) {
-            final String name = e.getClass().getSimpleName();
-            final String message = e.getMessage();
-            final String summary = String.format("%s: %s", name, message);
+            final String summary = new RFC3399().format(installed.get());
 
             currentDictionaryPreference.setSummary(summary);
             currentDictionaryPreference.setVisible(true);
 
-            return;
-        }
+        } else {
+            // We have no dictionary installed. The user should probably install one...
 
-        if (!versionString.isPresent()) {
-            currentDictionaryPreference.setSummary("Unknown version");  // Now that's what I call bad UX!
-            currentDictionaryPreference.setVisible(true);
-            return;
+            currentDictionaryPreference.setVisible(false);
+            currentDictionaryPreference.setSummary("");
         }
-
-        currentDictionaryPreference.setSummary(versionString.get());
     }
 
     //
@@ -374,15 +356,30 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private synchronized void onMetaDownloaded(RemoteDictionaryMeta meta) {
-        final String fileSize = FileSizeFormatter.format(meta.nbytes);
-        final String summary = String.format("%s (%s)", meta.version, fileSize);
+        if (hasNewerDictionary(meta)) {
+            // meta contains a new dictionary the user might want to download
 
-        runOnUiThread(() -> {
-            checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+            final String fileSize = FileSizeFormatter.format(meta.nbytes);
+            final String summary = String.format("%s (%s)", meta.version, fileSize);
 
-            downloadNewDictionaryPreference.setSummary(summary);
-            downloadNewDictionaryPreference.setVisible(true);
-        });
+            runOnUiThread(() -> {
+                checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+
+                downloadNewDictionaryPreference.setSummary(summary);
+                downloadNewDictionaryPreference.setVisible(true);
+            });
+        } else {
+            // meta contains an older/equal version of the dictionary
+
+            final String summary = "Latest version already installed";
+
+            runOnUiThread(() -> {
+                checkForDictionariesPreference.setSummary(summary);
+
+                downloadNewDictionaryPreference.setVisible(false);
+                downloadNewDictionaryPreference.setSummary("");
+            });
+        }
     }
 
     private synchronized void onMetaFailed(Exception error) {
@@ -395,6 +392,23 @@ public class SettingsActivity extends AppCompatActivity {
             downloadNewDictionaryPreference.setVisible(false);
             downloadNewDictionaryPreference.setSummary("");
         });
+    }
+
+    private synchronized boolean hasNewerDictionary(RemoteDictionaryMeta meta) {
+        final Context context = getApplicationContext();
+
+        final Optional<Date> installed = Wiktionary.getCreatedOn(context);
+        final Optional<Date> available = Wiktionary.parseDateString(meta.version);
+
+        if (!installed.isPresent()) {
+            return true;
+        }
+
+        if (!available.isPresent()) {
+            return false;
+        }
+
+        return available.get().after(installed.get());
     }
 
     //

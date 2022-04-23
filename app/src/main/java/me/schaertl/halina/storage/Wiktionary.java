@@ -4,15 +4,20 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.provider.ContactsContract;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
 import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.structs.Word;
+import me.schaertl.halina.support.RFC3399;
 
 public class Wiktionary {
     private Wiktionary() {}
@@ -57,6 +62,31 @@ public class Wiktionary {
     public static Optional<String> getMeta(String key, Context context) throws DatabaseException {
         try (SQLiteDatabase db = getDatabaseFor(context)) {
             return queryMetaWith(key, db);
+        }
+    }
+
+    /**
+     * Return when the database was created (on the backend.)
+     */
+    public static Optional<Date> getCreatedOn(Context context) {
+        try {
+            final Optional<String> createdOn = getMeta("CreatedOn", context);
+            return createdOn.isPresent() ? parseDateString(createdOn.get()) : Optional.empty();
+        } catch (DatabaseException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Parse date/time string as used in the meta table.
+     */
+    @SuppressLint("SimpleDateFormat")
+    public static Optional<Date> parseDateString(String s) {
+        try {
+            final Date date = new RFC3399().parse(s);
+            return Optional.of(date);
+        } catch (Exception e) {
+            return Optional.empty();
         }
     }
 
