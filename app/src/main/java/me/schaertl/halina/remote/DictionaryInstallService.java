@@ -9,11 +9,14 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import me.schaertl.halina.R;
 import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.structs.ProgressHandler;
 import me.schaertl.halina.storage.Storage;
+import me.schaertl.halina.support.Arithmetic;
 import me.schaertl.halina.support.Fs;
 import me.schaertl.halina.support.Gzip;
 import me.schaertl.halina.support.Http;
@@ -113,31 +116,13 @@ public class DictionaryInstallService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        final Notification notification = getInstallNotification();
+        createNotificationChannel();
+
+        final Notification notification = updateNotification(null, null);
         startForeground(FOREGROUND_ID, notification);
 
         return START_STICKY;
     }
-
-    private Notification getInstallNotification() {
-        createNotificationChannel();
-
-        final NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Halina")
-            .setContentText("BE RIGHT BACK!");
-
-        return builder.build();
-    }
-
-    private void createNotificationChannel() {
-        final NotificationChannel channel = new NotificationChannel(
-                NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NOTIFICATION_CHANNEL_IMPORTANCE
-        );
-
-        final NotificationManager notificationManager = getSystemService(NotificationManager.class);
-        notificationManager.createNotificationChannel(channel);
-    }
-
 
     @Override
     public synchronized IBinder onBind(Intent intent) {
@@ -162,6 +147,42 @@ public class DictionaryInstallService extends Service {
     public synchronized Report getReport() {
         return new Report(state, error, progress);
     }
+
+    //
+    // Notifications.
+    //
+
+    public synchronized Notification updateNotification(@Nullable String text, @Nullable Progress progress) {
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Halina");
+
+        if (text != null) {
+            builder = builder.setContentText(text);
+        }
+
+        if (progress != null) {
+            final int max = Arithmetic.clamp(progress.getTotalSteps());
+            final int done = Arithmetic.clamp(progress.getCompletedSteps());
+            builder = builder.setProgress(max, done, false);
+        }
+
+        final Notification notification = builder.build();
+        final NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.notify(FOREGROUND_ID, notification);
+
+        return notification;
+    }
+
+    private void createNotificationChannel() {
+        final NotificationChannel channel = new NotificationChannel(
+                NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NOTIFICATION_CHANNEL_IMPORTANCE
+        );
+
+        final NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+    }
+
 
     //
     // State Management.

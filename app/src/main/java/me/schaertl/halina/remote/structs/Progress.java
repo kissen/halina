@@ -29,4 +29,12 @@ public class Progress {
 
         return (completedReal / totalReal) * 100;
     }
+
+    public long getTotalSteps() {
+        return totalSteps;
+    }
+
+    public long getCompletedSteps() {
+        return completedSteps;
+    }
 }
