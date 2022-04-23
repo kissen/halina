@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 
 import me.schaertl.halina.storage.exceptions.DatabaseException;
-import me.schaertl.halina.storage.exceptions.NoDatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.structs.Word;
 
@@ -46,9 +45,18 @@ public class Wiktionary {
     /**
      * Given query string, return the definition for given word.
      */
-    public static Optional<Definition> lookUpDefinitionFor(String word, Context contenxt) throws DatabaseException {
-        try (SQLiteDatabase db = getDatabaseFor(contenxt)) {
+    public static Optional<Definition> lookUpDefinitionFor(String word, Context context) throws DatabaseException {
+        try (SQLiteDatabase db = getDatabaseFor(context)) {
             return queryDefinitionFor(word, db);
+        }
+    }
+
+    /**
+     * Return meta information from dictionary database.
+     */
+    public static Optional<String> getMeta(String key, Context context) throws DatabaseException {
+        try (SQLiteDatabase db = getDatabaseFor(context)) {
+            return queryMetaWith(key, db);
         }
     }
 
@@ -141,6 +149,28 @@ public class Wiktionary {
 
             final int wordId = resultCursor.getInt(resultCursor.getColumnIndex("id"));
             return Optional.of(wordId);
+        }
+    }
+
+    @SuppressLint("Range")
+    private static Optional<String> queryMetaWith(String key, SQLiteDatabase db) {
+        final String from = "meta";
+        final String[] select = { "value" };
+        final String where = "key = ?";
+        final String[] parameters = { key };
+        final String limit = "1";
+
+        try (Cursor resultCursor = db.query(from, select, where, parameters, null, null, limit)) {
+            if (resultCursor == null) {
+                return Optional.empty();
+            }
+
+            if (!resultCursor.moveToFirst()) {
+                return Optional.empty();
+            }
+
+            final String value = resultCursor.getString(resultCursor.getColumnIndex("value"));
+            return Optional.of(value);
         }
     }
 
