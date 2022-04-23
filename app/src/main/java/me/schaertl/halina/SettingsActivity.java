@@ -24,11 +24,14 @@ import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.support.FileSizeFormatter;
 
 public class SettingsActivity extends AppCompatActivity {
+    private static final int BIND_DO_NOT_CREATE_AUTOMATICALLY = 0;
+
     private MetaDownloadService metaDownloadService;
     private boolean metaDownloadServiceIsBound;
 
     private DictionaryInstallService dictionaryInstallService;
     private boolean dictionaryInstallServiceIsBound;
+    private String dictionaryInstallServiceUrl;
 
     private Preference checkForDictionariesPreference;
     private Preference downloadNewDictionaryPreference;
@@ -61,6 +64,7 @@ public class SettingsActivity extends AppCompatActivity {
         fragmentManger.beginTransaction().replace(R.id.settings, new ClickableSettingsFragment(this)).commit();
     }
 
+    @SuppressLint("WrongConstant")
     @Override
     protected synchronized void onStart() {
         super.onStart();
@@ -73,8 +77,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Set up install service.
 
         final Intent remoteService = new Intent(this, DictionaryInstallService.class);
-        startForegroundService(remoteService);
-        bindService(remoteService, installConnection, Context.BIND_AUTO_CREATE);
+        bindService(remoteService, installConnection, BIND_DO_NOT_CREATE_AUTOMATICALLY);
     }
 
     @Override
@@ -111,6 +114,10 @@ public class SettingsActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    //
+    // Service Management.
+    //
+
     private final BroadcastReceiver metaReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -140,16 +147,30 @@ public class SettingsActivity extends AppCompatActivity {
     };
 
     private final ServiceConnection installConnection = new ServiceConnection() {
+        private final SettingsActivity parent = SettingsActivity.this;
+
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            final DictionaryInstallService.DictionaryInstallBinder binder = (DictionaryInstallService.DictionaryInstallBinder) iBinder;
-            dictionaryInstallService = binder.getService();
-            dictionaryInstallServiceIsBound = true;
+            synchronized (parent) {
+                final DictionaryInstallService.DictionaryInstallBinder binder = (DictionaryInstallService.DictionaryInstallBinder) iBinder;
+                dictionaryInstallService = binder.getService();
+                dictionaryInstallServiceIsBound = true;
+
+                if (dictionaryInstallServiceUrl != null) {
+                    final Context context = parent.getApplicationContext();
+                    final String url = dictionaryInstallServiceUrl;
+
+                    dictionaryInstallService.installNewDictionary(context, url);
+                    dictionaryInstallServiceUrl = null;
+                }
+            }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            dictionaryInstallServiceIsBound = false;
+            synchronized (parent) {
+                dictionaryInstallServiceIsBound = false;
+            }
         }
     };
 
@@ -177,8 +198,12 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("WrongConstant")
     private synchronized void onDownloadNewDictionaryClicked() {
-        if (!metaDownloadServiceIsBound || !dictionaryInstallServiceIsBound) {
+        // We can only start a new dictionary install if we have the necessary
+        // meta data from the meta download service.
+
+        if (!metaDownloadServiceIsBound) {
             return;
         }
 
@@ -188,8 +213,35 @@ public class SettingsActivity extends AppCompatActivity {
             return;
         }
 
-        final Context context = getApplicationContext();
-        dictionaryInstallService.installNewDictionary(context, report.meta.url);
+        // We do have the necessary meta information. Try to start the install
+        // service which will do all the heavy lifting.
+        //
+        // TODO: Check for race conditions. Can we miss an event?
+
+        if (dictionaryInstallServiceIsBound) {
+            final Context context = getApplicationContext();
+            final String url = report.meta.url;
+
+            dictionaryInstallService.installNewDictionary(context, url);
+            return;
+        }
+
+        // If the URL is non-null that means that we previously started the
+        // service (for use w/ this url) but the service has not started *yet*.
+        // Here we quit early because we do not want to start multiple downloads.
+
+        if (dictionaryInstallServiceUrl != null) {
+            return;
+        }
+
+        // We do not have a running service nor do we have a pending start.
+        // This means we have to start the service ourselves.
+
+        dictionaryInstallServiceUrl = report.meta.url;
+
+        final Intent remoteService = new Intent(this, DictionaryInstallService.class);
+        startForegroundService(remoteService);
+        bindService(remoteService, installConnection, BIND_DO_NOT_CREATE_AUTOMATICALLY);
     }
 
     public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
@@ -360,6 +412,10 @@ public class SettingsActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setVisible(false);
             downloadNewDictionaryPreference.setSummary("Done!");
+
+            if (dictionaryInstallServiceIsBound) {
+                dictionaryInstallService.stop();
+            }
         });
     }
 
@@ -370,6 +426,10 @@ public class SettingsActivity extends AppCompatActivity {
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
+
+            if (dictionaryInstallServiceIsBound) {
+                dictionaryInstallService.stop();
+            }
         });
     }
 }

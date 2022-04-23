@@ -74,8 +74,28 @@ public class DictionaryInstallService extends Service {
 
     private State state;
     private Exception error;
-    private InstallTask task;
     private Progress progress;
+    private boolean isBound;
+    private boolean isShuttingDown;
+
+    private InstallTask installTask;
+    private StopTask stopTask;
+
+    //
+    // Static Helpers.
+    //
+
+    private static boolean isStopState(State state) {
+        switch (state) {
+            case READY:
+            case INSTALLED:
+            case ERROR:
+                return true;
+
+            default:
+                return false;
+        }
+    }
 
     //
     // Constructor.
@@ -83,6 +103,7 @@ public class DictionaryInstallService extends Service {
 
     public DictionaryInstallService() {
         super();
+
         state = State.READY;
     }
 
@@ -119,8 +140,19 @@ public class DictionaryInstallService extends Service {
 
 
     @Override
-    public IBinder onBind(Intent intent) {
+    public synchronized IBinder onBind(Intent intent) {
+        if (stopTask == null) {
+            stopTask = new StopTask();
+            stopTask.start();
+        }
+
         return new DictionaryInstallBinder();
+    }
+
+    @Override
+    public synchronized boolean onUnbind(Intent intent) {
+        isBound = false;
+        return true;
     }
 
     //
@@ -136,7 +168,11 @@ public class DictionaryInstallService extends Service {
     //
 
     public synchronized void installNewDictionary(Context context, String gzipUrl) {
-        if (task != null) {
+        if (isShuttingDown) {
+            return;
+        }
+
+        if (installTask != null) {
             return;
         }
 
@@ -144,8 +180,8 @@ public class DictionaryInstallService extends Service {
         this.error = null;
         this.progress = null;
 
-        this.task = new InstallTask(context, gzipUrl);
-        this.task.start();
+        this.installTask = new InstallTask(context, gzipUrl);
+        this.installTask.start();
 
         triggerBroadcast();
     }
@@ -154,7 +190,7 @@ public class DictionaryInstallService extends Service {
         this.state = State.ERROR;
         this.error = cause;
         this.progress = null;
-        this.task = null;
+        this.installTask = null;
 
         triggerBroadcast();
     }
@@ -164,6 +200,10 @@ public class DictionaryInstallService extends Service {
         this.error = null;
         this.progress = progress;
 
+        if (isStopState(state)) {
+            this.installTask = null;
+        }
+
         triggerBroadcast();
     }
 
@@ -172,8 +212,68 @@ public class DictionaryInstallService extends Service {
         sendBroadcast(intent);
     }
 
+    //
+    // Logic for Stopping the Service.
+    //
+
+    public synchronized void stop() {
+        isShuttingDown = true;
+
+        stopForeground(true);
+        stopSelf();
+    }
+
     /**
-     * Tasks that downloads, extracts and installs a new dictionary file.
+     * Task that repeatedly checks the state of the parent DictionaryInstallService.
+     *
+     * If the parent remains in a stopped state for some ammount of time, this task
+     * kills the service. This is necessary because we do not want an inactive service
+     * running in the foreground.
+     */
+    private class StopTask extends Task {
+        private final static int DELAY_MS = 2500;
+        private final DictionaryInstallService parent = DictionaryInstallService.this;
+
+        @Override
+        public void execute() throws Exception {
+            boolean wasInStopState = false;
+
+            while (!parent.isShuttingDown) {
+                Thread.sleep(DELAY_MS);
+
+                synchronized (parent) {
+                    final boolean inStopState = parentIsInStopState();
+
+                    if (inStopState && wasInStopState) {
+                        parent.stop();
+                    }
+
+                    wasInStopState = inStopState;
+                }
+            }
+        }
+
+        @Override
+        public void on(Exception e) {
+            e.printStackTrace();
+        }
+
+        private boolean parentIsInStopState() {
+            if (parent.isBound) {
+                return false;
+            }
+
+            return isStopState(parent.state);
+        }
+    }
+
+    //
+    // Actual Download, Extract and Install.
+    //
+
+    /**
+     * Tasks that downloads, extracts and installs a new dictionary file in the background.
+     * That is, InstallTask does all the heavy lifting.
      */
     private class InstallTask extends Task implements ProgressHandler {
         private final Context context;
