@@ -216,7 +216,7 @@ public class DictionaryInstallService extends Service {
         };
 
         final PendingIntent pending = PendingIntent.getActivities(
-                this, 0, intents, PendingIntent.FLAG_UPDATE_CURRENT
+            this, 0, intents, PendingIntent.FLAG_UPDATE_CURRENT
         );
 
         // Now we can create the notification.

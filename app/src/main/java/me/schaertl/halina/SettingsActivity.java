@@ -383,6 +383,8 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
@@ -393,6 +395,8 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
@@ -402,6 +406,8 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
@@ -411,12 +417,14 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setVisible(false);
-            downloadNewDictionaryPreference.setSummary(summary);
-
             if (dictionaryInstallServiceIsBound) {
                 dictionaryInstallService.stop();
             }
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary(summary);
+
+            checkForDictionariesPreference.setVisible(true);
         });
     }
 
@@ -424,12 +432,14 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setSummary(summary);
-            downloadNewDictionaryPreference.setVisible(true);
-
             if (dictionaryInstallServiceIsBound) {
                 dictionaryInstallService.stop();
             }
+
+            downloadNewDictionaryPreference.setSummary(summary);
+            downloadNewDictionaryPreference.setVisible(true);
+
+            checkForDictionariesPreference.setVisible(true);
         });
     }
 }
