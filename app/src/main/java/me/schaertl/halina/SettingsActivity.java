@@ -24,6 +24,7 @@ import me.schaertl.halina.remote.MetaDownloadService;
 import me.schaertl.halina.remote.DictionaryInstallService;
 import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.FileSizeFormatter;
 import me.schaertl.halina.support.RFC3399;
 
@@ -38,6 +39,7 @@ public class SettingsActivity extends AppCompatActivity {
     private String dictionaryInstallServiceUrl;
 
     private Preference currentDictionaryPreference;
+    private Preference currentDictionaryCopyingPreference;
     private Preference checkForDictionariesPreference;
     private Preference downloadNewDictionaryPreference;
 
@@ -205,6 +207,15 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    private synchronized void onViewCopyingClicked() {
+        final Context context = getApplicationContext();
+        final Optional<String> copying = Wiktionary.getCopying(context);
+
+        if (copying.isPresent()) {
+            Caller.callTextViewActivityFrom(this, "Copying", copying.get());
+        }
+    }
+
     @SuppressLint("WrongConstant")
     private synchronized void onDownloadNewDictionaryClicked() {
         // We can only start a new dictionary install if we have the necessary
@@ -266,6 +277,13 @@ public class SettingsActivity extends AppCompatActivity {
             // [Display current dictionary]
             parent.currentDictionaryPreference = findPreference("preference_current_dictionary");
 
+            // [View copying]
+            parent.currentDictionaryCopyingPreference = findPreference("preference_current_dictionary_copying");
+            parent.currentDictionaryCopyingPreference.setOnPreferenceClickListener(preference -> {
+                parent.runOnUiThread(parent::onViewCopyingClicked);
+                return false;
+            });
+
             // [Check for new dictionary]
             parent.checkForDictionariesPreference = findPreference("preference_download_meta");
             parent.checkForDictionariesSummary = parent.checkForDictionariesPreference.getSummary().toString();
@@ -298,10 +316,11 @@ public class SettingsActivity extends AppCompatActivity {
 
             currentDictionaryPreference.setSummary(summary);
             currentDictionaryPreference.setVisible(true);
-
+            currentDictionaryCopyingPreference.setVisible(true);
         } else {
             // We have no dictionary installed. The user should probably install one...
 
+            currentDictionaryCopyingPreference.setVisible(false);
             currentDictionaryPreference.setVisible(false);
             currentDictionaryPreference.setSummary("");
         }

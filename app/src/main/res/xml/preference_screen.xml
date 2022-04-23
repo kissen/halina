@@ -11,6 +11,14 @@
             app:isPreferenceVisible="false"
             app:title="Currently installed dictionary" />
         <Preference
+            android:id="@+id/preference_current_dictionary_copying"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:key="preference_current_dictionary_copying"
+            app:isPreferenceVisible="false"
+            app:title="View copying"
+            app:summary="Show copyright and license information of currently installed dictionary" />
+        <Preference
             android:id="@+id/preference_download_meta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

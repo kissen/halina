@@ -1,6 +1,5 @@
 package me.schaertl.halina.storage;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 
 import java.io.File;
@@ -9,10 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 

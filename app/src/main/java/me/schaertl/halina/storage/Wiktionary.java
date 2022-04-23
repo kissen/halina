@@ -57,15 +57,6 @@ public class Wiktionary {
     }
 
     /**
-     * Return meta information from dictionary database.
-     */
-    public static Optional<String> getMeta(String key, Context context) throws DatabaseException {
-        try (SQLiteDatabase db = getDatabaseFor(context)) {
-            return queryMetaWith(key, db);
-        }
-    }
-
-    /**
      * Return when the database was created (on the backend.)
      */
     public static Optional<Date> getCreatedOn(Context context) {
@@ -74,6 +65,26 @@ public class Wiktionary {
             return createdOn.isPresent() ? parseDateString(createdOn.get()) : Optional.empty();
         } catch (DatabaseException e) {
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Return copying information embeded in database.
+     */
+    public static Optional<String> getCopying(Context context) {
+        try {
+            return getMeta("Copying", context);
+        } catch (DatabaseException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Return meta information from dictionary database.
+     */
+    private static Optional<String> getMeta(String key, Context context) throws DatabaseException {
+        try (SQLiteDatabase db = getDatabaseFor(context)) {
+            return queryMetaWith(key, db);
         }
     }
 
