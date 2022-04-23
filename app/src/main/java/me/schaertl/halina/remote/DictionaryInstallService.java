@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,9 +12,12 @@ import android.os.Binder;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
+import me.schaertl.halina.MainActivity;
 import me.schaertl.halina.R;
+import me.schaertl.halina.SettingsActivity;
 import me.schaertl.halina.remote.structs.Progress;
 import me.schaertl.halina.remote.structs.ProgressHandler;
 import me.schaertl.halina.storage.Storage;
@@ -203,9 +207,25 @@ public class DictionaryInstallService extends Service {
     //
 
     public synchronized Notification updateNotification(@Nullable String text, @Nullable Progress progress) {
+        // Prepare pending intent. We need to do this so the notification becomes
+        // clickable and redirects us to the settings.
+
+        final Intent[] intents = {
+            new Intent(this, MainActivity.class),
+            new Intent(this, SettingsActivity.class)
+        };
+
+        final PendingIntent pending = PendingIntent.getActivities(
+                this, 0, intents, PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        // Now we can create the notification.
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Halina");
+                .setContentTitle("Halina")
+                .setOngoing(true)
+                .setContentIntent(pending);
 
         if (text != null) {
             builder = builder.setContentText(text);
@@ -216,6 +236,8 @@ public class DictionaryInstallService extends Service {
             final int done = Arithmetic.clamp(progress.getCompletedSteps());
             builder = builder.setProgress(max, done, false);
         }
+
+        // Display the notifcation.
 
         final Notification notification = builder.build();
         final NotificationManager notificationManager = getSystemService(NotificationManager.class);
