@@ -7,6 +7,7 @@ import android.os.IBinder;
 
 import org.json.JSONObject;
 
+import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Http;
 import me.schaertl.halina.support.Result;
 import me.schaertl.halina.support.Task;
@@ -16,7 +17,7 @@ public class MetaDownloadService extends Service {
     // Constants.
     //
 
-    public static String BROADCAST_FILTER = "MetaDownloadService#BroadcastFilter";
+    public static String BROADCAST_FILTER = "MetaDownloadService#BROADCAST_FILTER";
 
     //
     // Public Types.
@@ -60,7 +61,7 @@ public class MetaDownloadService extends Service {
     // Constructor.
     //
 
-    MetaDownloadService() {
+    public MetaDownloadService() {
         super();
         state = State.READY;
     }

@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="me.schaertl.halina">
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -9,6 +11,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Halina">
+        <activity
+            android:name=".TextViewActivity"
+            android:exported="true" />
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
@@ -25,8 +30,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service
-            android:name=".remote.RemoteDictionaryService" />
+
+        <service android:name=".remote.DictionaryInstallService" />
+        <service android:name=".remote.MetaDownloadService" />
     </application>
 
 </manifest>

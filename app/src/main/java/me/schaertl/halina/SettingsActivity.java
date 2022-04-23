@@ -17,52 +17,63 @@ import androidx.fragment.app.FragmentManager;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
+import java.util.Date;
 import java.util.Optional;
 
 import me.schaertl.halina.remote.MetaDownloadService;
-import me.schaertl.halina.remote.RemoteDictionaryServiceBinder;
-import me.schaertl.halina.remote.structs.Phase;
-import me.schaertl.halina.remote.structs.Progress;
-import me.schaertl.halina.remote.structs.RemoteDictionaryHandler;
-import me.schaertl.halina.remote.RemoteDictionaryService;
-import me.schaertl.halina.remote.RemoteDictionaryMeta;
-import me.schaertl.halina.support.Toaster;
+import me.schaertl.halina.remote.DictionaryInstallService;
+import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
+import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.FileSizeFormatter;
+import me.schaertl.halina.support.RFC3399;
 
-public class SettingsActivity extends AppCompatActivity implements RemoteDictionaryHandler {
+public class SettingsActivity extends AppCompatActivity {
+    private static final int BIND_DO_NOT_CREATE_AUTOMATICALLY = 0;
+
     private MetaDownloadService metaDownloadService;
     private boolean metaDownloadServiceIsBound;
 
-    private RemoteDictionaryService remoteDictionaryService;
-    private boolean remoteDictionaryServiceIsBound;
+    private DictionaryInstallService dictionaryInstallService;
+    private boolean dictionaryInstallServiceIsBound;
+    private String dictionaryInstallServiceUrl;
 
+    private Preference currentDictionaryPreference;
+    private Preference currentDictionaryCopyingPreference;
     private Preference checkForDictionariesPreference;
     private Preference downloadNewDictionaryPreference;
+
+    private String checkForDictionariesSummary;
 
     //
     // Android Lifetime Callbacks.
     //
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected synchronized void onCreate(Bundle savedInstanceState) {
         // Set up activity.
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_activity);
         setTitle("Settings");
 
         // Configure action bar.
+
         final ActionBar actionBar = getSupportActionBar();
+
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
         // Load settings fragment.
+
         final FragmentManager fragmentManger = getSupportFragmentManager();
         fragmentManger.beginTransaction().replace(R.id.settings, new ClickableSettingsFragment(this)).commit();
     }
 
+    @SuppressLint("WrongConstant")
     @Override
-    protected void onStart() {
+    protected synchronized void onStart() {
         super.onStart();
 
         // Set up meta service.
@@ -72,40 +83,54 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
 
         // Set up install service.
 
-        final Intent remoteService = new Intent(this, RemoteDictionaryService.class);
-        bindService(remoteService, connection, Context.BIND_AUTO_CREATE);
+        final Intent remoteService = new Intent(this, DictionaryInstallService.class);
+        bindService(remoteService, installConnection, BIND_DO_NOT_CREATE_AUTOMATICALLY);
     }
 
     @Override
-    protected void onStop() {
+    protected synchronized void onStop() {
         super.onStop();
 
-        unbindService(connection);
-        remoteDictionaryServiceIsBound = false;
-
+        syncWithMetaDownloadService();
         unbindService(metaConnection);
         metaDownloadServiceIsBound = false;
+
+        syncWithInstallService();
+        unbindService(installConnection);
+        dictionaryInstallServiceIsBound = false;
     }
 
     @Override
-    protected void onResume() {
+    protected synchronized void onResume() {
         super.onResume();
 
         final IntentFilter metaFilter = new IntentFilter(MetaDownloadService.BROADCAST_FILTER);
         registerReceiver(metaReceiver, metaFilter);
+        syncWithMetaDownloadService();
+
+        final IntentFilter installFilter = new IntentFilter(DictionaryInstallService.BROADCAST_FILTER);
+        registerReceiver(installReceiver, installFilter);
+        syncWithInstallService();
+
+        syncWithStorage();
     }
 
     @Override
     protected void onDestroy() {
         unregisterReceiver(metaReceiver);
+        unregisterReceiver(installReceiver);
 
         super.onDestroy();
     }
 
+    //
+    // Service Management.
+    //
+
     private final BroadcastReceiver metaReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            onMetaStateChanged();
+            syncWithMetaDownloadService();
         }
     };
 
@@ -123,17 +148,38 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         }
     };
 
-    private final ServiceConnection connection = new ServiceConnection() {
+    private final BroadcastReceiver installReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            syncWithInstallService();
+        }
+    };
+
+    private final ServiceConnection installConnection = new ServiceConnection() {
+        private final SettingsActivity parent = SettingsActivity.this;
+
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            final RemoteDictionaryServiceBinder binder = (RemoteDictionaryServiceBinder) iBinder;
-            remoteDictionaryService = binder.getService();
-            remoteDictionaryServiceIsBound = true;
+            synchronized (parent) {
+                final DictionaryInstallService.DictionaryInstallBinder binder = (DictionaryInstallService.DictionaryInstallBinder) iBinder;
+                dictionaryInstallService = binder.getService();
+                dictionaryInstallServiceIsBound = true;
+
+                if (dictionaryInstallServiceUrl != null) {
+                    final Context context = parent.getApplicationContext();
+                    final String url = dictionaryInstallServiceUrl;
+
+                    dictionaryInstallService.installNewDictionary(context, url);
+                    dictionaryInstallServiceUrl = null;
+                }
+            }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-            remoteDictionaryServiceIsBound = false;
+            synchronized (parent) {
+                dictionaryInstallServiceIsBound = false;
+            }
         }
     };
 
@@ -161,15 +207,59 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         }
     }
 
-    private synchronized void onDownloadNewDictionaryClicked() {
-        final Optional<RemoteDictionaryService> service = RemoteDictionaryService.getInstance();
+    private synchronized void onViewCopyingClicked() {
+        final Context context = getApplicationContext();
+        final Optional<String> copying = Wiktionary.getCopying(context);
 
-        if (service.isPresent()) {
-            final String hardCodedUrl = "https://halina.schaertl.me/dictionaries/enwiktionary-latest-pages-articles.sqlite3.gz";
-
-            Toaster.toastFrom(this, "downloading new dictionary...");
-            service.get().startNewDownloadFrom(hardCodedUrl);
+        if (copying.isPresent()) {
+            Caller.callTextViewActivityFrom(this, "Copying", copying.get());
         }
+    }
+
+    @SuppressLint("WrongConstant")
+    private synchronized void onDownloadNewDictionaryClicked() {
+        // We can only start a new dictionary install if we have the necessary
+        // meta data from the meta download service.
+
+        if (!metaDownloadServiceIsBound) {
+            return;
+        }
+
+        final MetaDownloadService.Report report = metaDownloadService.getReport();
+
+        if (report.state != MetaDownloadService.State.DOWNLOADED) {
+            return;
+        }
+
+        // We do have the necessary meta information. Try to start the install
+        // service which will do all the heavy lifting.
+        //
+        // TODO: Check for race conditions. Can we miss an event?
+
+        if (dictionaryInstallServiceIsBound) {
+            final Context context = getApplicationContext();
+            final String url = report.meta.url;
+
+            dictionaryInstallService.installNewDictionary(context, url);
+            return;
+        }
+
+        // If the URL is non-null that means that we previously started the
+        // service (for use w/ this url) but the service has not started *yet*.
+        // Here we quit early because we do not want to start multiple downloads.
+
+        if (dictionaryInstallServiceUrl != null) {
+            return;
+        }
+
+        // We do not have a running service nor do we have a pending start.
+        // This means we have to start the service ourselves.
+
+        dictionaryInstallServiceUrl = report.meta.url;
+
+        final Intent remoteService = new Intent(this, DictionaryInstallService.class);
+        startForegroundService(remoteService);
+        bindService(remoteService, installConnection, BIND_DO_NOT_CREATE_AUTOMATICALLY);
     }
 
     public static class ClickableSettingsFragment extends PreferenceFragmentCompat  {
@@ -184,8 +274,19 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
             // Load preferences from XML.
             setPreferencesFromResource(R.xml.preference_screen, rootKey);
 
+            // [Display current dictionary]
+            parent.currentDictionaryPreference = findPreference("preference_current_dictionary");
+
+            // [View copying]
+            parent.currentDictionaryCopyingPreference = findPreference("preference_current_dictionary_copying");
+            parent.currentDictionaryCopyingPreference.setOnPreferenceClickListener(preference -> {
+                parent.runOnUiThread(parent::onViewCopyingClicked);
+                return false;
+            });
+
             // [Check for new dictionary]
             parent.checkForDictionariesPreference = findPreference("preference_download_meta");
+            parent.checkForDictionariesSummary = parent.checkForDictionariesPreference.getSummary().toString();
             parent.checkForDictionariesPreference.setOnPreferenceClickListener(preference -> {
                 parent.runOnUiThread(parent::onCheckForNewDictionaryClicked);
                 return false;
@@ -201,10 +302,35 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
     }
 
     //
-    // Callbacks triggered by Meta Task.
+    // Display Current Dictionary Info.
     //
 
-    public synchronized void onMetaStateChanged() {
+    private synchronized void syncWithStorage() {
+        final Context context = getApplicationContext();
+        final Optional<Date> installed = Wiktionary.getCreatedOn(context);
+
+        if (installed.isPresent()) {
+            // We have some version installed.
+
+            final String summary = new RFC3399().format(installed.get());
+
+            currentDictionaryPreference.setSummary(summary);
+            currentDictionaryPreference.setVisible(true);
+            currentDictionaryCopyingPreference.setVisible(true);
+        } else {
+            // We have no dictionary installed. The user should probably install one...
+
+            currentDictionaryCopyingPreference.setVisible(false);
+            currentDictionaryPreference.setVisible(false);
+            currentDictionaryPreference.setSummary("");
+        }
+    }
+
+    //
+    // Callbacks triggered by Meta Service.
+    //
+
+    private synchronized void syncWithMetaDownloadService() {
         if (!metaDownloadServiceIsBound) {
             return;
         }
@@ -212,8 +338,13 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         final MetaDownloadService.Report report = metaDownloadService.getReport();
 
         switch (report.state) {
+            case READY:
+                onMetaReady();
+                break;
+
             case DOWNLOADING:
                 onMetaDownloading();
+                break;
 
             case DOWNLOADED:
                 onMetaDownloaded(report.meta);
@@ -225,21 +356,49 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         }
     }
 
+    private synchronized void onMetaReady() {
+        runOnUiThread(() -> {
+            checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary("");
+        });
+    }
+
     private synchronized void onMetaDownloading() {
         runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setSummary("Downloading...");
-            downloadNewDictionaryPreference.setVisible(true);
+            checkForDictionariesPreference.setSummary("Downloading...");
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary("");
         });
     }
 
     private synchronized void onMetaDownloaded(RemoteDictionaryMeta meta) {
-        final String nbytes = FileSizeFormatter.format(meta.nbytes);
-        final String summary = String.format("%s (%s)", meta.version, nbytes);
+        if (hasNewerDictionary(meta)) {
+            // meta contains a new dictionary the user might want to download
 
-        runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setSummary(summary);
-            downloadNewDictionaryPreference.setVisible(true);
-        });
+            final String fileSize = FileSizeFormatter.format(meta.nbytes);
+            final String summary = String.format("%s (%s)", meta.version, fileSize);
+
+            runOnUiThread(() -> {
+                checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+
+                downloadNewDictionaryPreference.setSummary(summary);
+                downloadNewDictionaryPreference.setVisible(true);
+            });
+        } else {
+            // meta contains an older/equal version of the dictionary
+
+            final String summary = "Latest version already installed";
+
+            runOnUiThread(() -> {
+                checkForDictionariesPreference.setSummary(summary);
+
+                downloadNewDictionaryPreference.setVisible(false);
+                downloadNewDictionaryPreference.setSummary("");
+            });
+        }
     }
 
     private synchronized void onMetaFailed(Exception error) {
@@ -247,42 +406,127 @@ public class SettingsActivity extends AppCompatActivity implements RemoteDiction
         final String summary = String.format("%s: %s", name, error.getMessage());
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setSummary(summary);
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary("");
+        });
+    }
+
+    private synchronized boolean hasNewerDictionary(RemoteDictionaryMeta meta) {
+        final Context context = getApplicationContext();
+
+        final Optional<Date> installed = Wiktionary.getCreatedOn(context);
+        final Optional<Date> available = Wiktionary.parseDateString(meta.version);
+
+        if (!installed.isPresent()) {
+            return true;
+        }
+
+        if (!available.isPresent()) {
+            return false;
+        }
+
+        return available.get().after(installed.get());
+    }
+
+    //
+    // Callbacks triggered by Install Service.
+    //
+
+    private synchronized void syncWithInstallService() {
+        if (!dictionaryInstallServiceIsBound) {
+            return;
+        }
+
+        final DictionaryInstallService.Report report = dictionaryInstallService.getReport();
+
+        switch (report.state) {
+            case DOWNLOADING:
+                onInstallDownloading(report);
+                break;
+
+            case EXTRACTING:
+                onInstallExtracting(report);
+                break;
+
+            case INSTALLING:
+                onInstallInstalling(report);
+                break;
+
+            case INSTALLED:
+                onInstallInstalled(report);
+                break;
+
+            case ERROR:
+                onInstallError(report);
+                break;
+        }
+
+        syncWithStorage();
+    }
+
+    private synchronized void onInstallDownloading(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
+        runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
     }
 
-    @Override
-    public synchronized void onNewMeta(RemoteDictionaryMeta meta) {
-        // TODO: Delete me
-    }
-
-    @Override
-    public synchronized void onNewMetaFailed(String errorMessage) {
-        // TODO: Delete me
-    }
-
     @SuppressLint("DefaultLocale")
-    @Override
-    public synchronized void onInstallProgress(String url, Phase phase, Progress progress) {
+    private synchronized void onInstallExtracting(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
         runOnUiThread(() -> {
-            final String message = phase.format(progress);
-            this.downloadNewDictionaryPreference.setSummary(message);
+            checkForDictionariesPreference.setVisible(false);
+
+            downloadNewDictionaryPreference.setSummary(summary);
+            downloadNewDictionaryPreference.setVisible(true);
         });
     }
 
-    @Override
-    public synchronized void onInstallCompleted(String fileLocation) {
+    private synchronized void onInstallInstalling(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
         runOnUiThread(() -> {
-            this.downloadNewDictionaryPreference.setSummary("Installed!");
+            checkForDictionariesPreference.setVisible(false);
+
+            downloadNewDictionaryPreference.setSummary(summary);
+            downloadNewDictionaryPreference.setVisible(true);
         });
     }
 
-    @Override
-    public synchronized void onInstallFailed(String errorMessage) {
+    private synchronized void onInstallInstalled(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
         runOnUiThread(() -> {
-            final String message = "Install Failed: " + errorMessage;
-            this.downloadNewDictionaryPreference.setSummary(message);
+            if (dictionaryInstallServiceIsBound) {
+                dictionaryInstallService.stop();
+            }
+
+            downloadNewDictionaryPreference.setVisible(false);
+            downloadNewDictionaryPreference.setSummary(summary);
+
+            checkForDictionariesPreference.setVisible(true);
+        });
+    }
+
+    private synchronized void onInstallError(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
+        runOnUiThread(() -> {
+            if (dictionaryInstallServiceIsBound) {
+                dictionaryInstallService.stop();
+            }
+
+            downloadNewDictionaryPreference.setSummary(summary);
+            downloadNewDictionaryPreference.setVisible(true);
+
+            checkForDictionariesPreference.setVisible(true);
         });
     }
 }

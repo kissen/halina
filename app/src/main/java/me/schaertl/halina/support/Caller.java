@@ -6,6 +6,7 @@ import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 
 import me.schaertl.halina.SettingsActivity;
+import me.schaertl.halina.TextViewActivity;
 import me.schaertl.halina.ViewEntryActivity;
 
 public class Caller {
@@ -28,6 +29,17 @@ public class Caller {
 
     public static void callSettingsActivityFrom(AppCompatActivity activity) {
         final Intent next = new Intent(activity, SettingsActivity.class);
+        activity.startActivity(next);
+    }
+
+    public static void callTextViewActivityFrom(AppCompatActivity activity, String title, String text) {
+        final Bundle arguments = new Bundle();
+        arguments.putString("title", title);
+        arguments.putString("text", text);
+
+        final Intent next = new Intent(activity, TextViewActivity.class);
+        next.putExtras(arguments);
+
         activity.startActivity(next);
     }
 }

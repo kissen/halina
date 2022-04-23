@@ -1,14 +1,16 @@
 package me.schaertl.halina.remote.structs;
 
 public class Progress {
-    public final long createdOn;
     private final long completedSteps;
     private final long totalSteps;
+
+    public static Progress zero() {
+        return new Progress(0, 1);  // 0%
+    }
 
     public Progress(long completedSteps, long totalSteps) {
         this.completedSteps = completedSteps;
         this.totalSteps = totalSteps;
-        this.createdOn = System.currentTimeMillis();
     }
 
     public float percent() {
@@ -24,5 +26,13 @@ public class Progress {
         final float totalReal = totalSteps;
 
         return (completedReal / totalReal) * 100;
+    }
+
+    public long getTotalSteps() {
+        return totalSteps;
+    }
+
+    public long getCompletedSteps() {
+        return completedSteps;
     }
 }

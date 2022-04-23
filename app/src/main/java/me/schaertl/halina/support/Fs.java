@@ -28,4 +28,9 @@ public class Fs {
     public static String join(String base, String... components) {
         return Paths.get(base, components).toString();
     }
+
+    public static long fileSize(String path) throws IOException {
+        final Path ppath = Paths.get(path);
+        return Files.size(ppath);
+    }
 }

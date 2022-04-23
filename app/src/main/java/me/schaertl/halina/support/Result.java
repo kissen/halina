@@ -42,6 +42,14 @@ public class Result<ResultType> {
         return this.error != null;
     }
 
+    public ResultType get() throws Exception {
+        if (this.error != null) {
+            throw this.error;
+        }
+
+        return this.result;
+    }
+
     public ResultType getResult() {
         if (this.result == null) {
             throw new IllegalStateException("tried to get result that is not present");
