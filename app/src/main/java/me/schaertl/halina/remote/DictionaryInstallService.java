@@ -1,5 +1,6 @@
 package me.schaertl.halina.remote;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -99,6 +100,55 @@ public class DictionaryInstallService extends Service {
                 return false;
         }
     }
+
+    @SuppressLint("DefaultLocale")
+    public static String format(Report report) {
+        final State state = report.state;
+        final String progress = format(report.progress);
+
+        switch (state) {
+            case DOWNLOADING:
+                return String.format("Downloading... %s", progress);
+
+            case EXTRACTING:
+                return String.format("Extracting... %s", progress);
+
+            case INSTALLING:
+                return String.format("Installing... %s", progress);
+
+            case INSTALLED:
+                return "Installed.";
+
+            case ERROR:
+                return format(report.error);
+
+            default:
+                return "Ready.";
+        }
+    }
+
+    @SuppressLint("DefaultLocale")
+    private static String format(@Nullable Progress progress) {
+        if (progress == null) {
+            return "";
+        }
+
+        final int percent = Math.round(progress.percent());
+        return String.format("(%d%%)", percent);
+    }
+
+    @SuppressLint("DefaultLocale")
+    private static String format(@Nullable Exception e) {
+        if (e == null) {
+            return "";
+        }
+
+        final String name = e.getClass().getSimpleName();
+        final String message = e.getMessage();
+
+        return String.format("%s: %s", name, message);
+    }
+
 
     //
     // Constructor.
@@ -204,7 +254,7 @@ public class DictionaryInstallService extends Service {
         this.installTask = new InstallTask(context, gzipUrl);
         this.installTask.start();
 
-        triggerBroadcast();
+        publishStateChange();
     }
 
     private synchronized void setError(Exception cause) {
@@ -213,7 +263,7 @@ public class DictionaryInstallService extends Service {
         this.progress = null;
         this.installTask = null;
 
-        triggerBroadcast();
+        publishStateChange();
     }
 
     private synchronized void setProgress(State state, Progress progress) {
@@ -225,10 +275,18 @@ public class DictionaryInstallService extends Service {
             this.installTask = null;
         }
 
-        triggerBroadcast();
+        publishStateChange();
     }
 
-    private synchronized void triggerBroadcast() {
+    private synchronized void publishStateChange() {
+        // Update the notification.
+
+        final Report report = getReport();
+        final String summary = format(report);
+        updateNotification(summary, report.progress);
+
+        // Broadcast that we have some news to share.
+
         final Intent intent = new Intent(BROADCAST_FILTER);
         sendBroadcast(intent);
     }

@@ -358,31 +358,29 @@ public class SettingsActivity extends AppCompatActivity {
 
         switch (report.state) {
             case DOWNLOADING:
-                onInstallDownloading(report.progress);
+                onInstallDownloading(report);
                 break;
 
             case EXTRACTING:
-                onInstallExtracting(report.progress);
+                onInstallExtracting(report);
                 break;
 
             case INSTALLING:
-                onInstallInstalling();
+                onInstallInstalling(report);
                 break;
 
             case INSTALLED:
-                onInstallInstalled();
+                onInstallInstalled(report);
                 break;
 
             case ERROR:
-                onInstallError(report.error);
+                onInstallError(report);
                 break;
         }
     }
 
-    @SuppressLint("DefaultLocale")
-    private synchronized void onInstallDownloading(Progress progress) {
-        final int percent = Math.round(progress.percent());
-        final String summary = String.format("Downloading... (%d%%)", percent);
+    private synchronized void onInstallDownloading(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setSummary(summary);
@@ -391,9 +389,8 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     @SuppressLint("DefaultLocale")
-    private synchronized void onInstallExtracting(Progress progress) {
-        final int percent = Math.round(progress.percent());
-        final String summary = String.format("Extracting... (%d%%)", percent);
+    private synchronized void onInstallExtracting(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setSummary(summary);
@@ -401,17 +398,21 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized void onInstallInstalling() {
+    private synchronized void onInstallInstalling(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
         runOnUiThread(() -> {
-            downloadNewDictionaryPreference.setSummary("Installing...");
+            downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
         });
     }
 
-    private synchronized void onInstallInstalled() {
+    private synchronized void onInstallInstalled(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
+
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setVisible(false);
-            downloadNewDictionaryPreference.setSummary("Done!");
+            downloadNewDictionaryPreference.setSummary(summary);
 
             if (dictionaryInstallServiceIsBound) {
                 dictionaryInstallService.stop();
@@ -419,9 +420,8 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized void onInstallError(Exception error) {
-        final String name = error.getClass().getSimpleName();
-        final String summary = String.format("%s: %s", name, error.getMessage());
+    private synchronized void onInstallError(DictionaryInstallService.Report report) {
+        final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
             downloadNewDictionaryPreference.setSummary(summary);
