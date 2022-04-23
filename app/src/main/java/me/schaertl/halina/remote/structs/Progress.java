@@ -1,7 +1,6 @@
 package me.schaertl.halina.remote.structs;
 
 public class Progress {
-    public final long createdOn;
     private final long completedSteps;
     private final long totalSteps;
 
@@ -12,7 +11,6 @@ public class Progress {
     public Progress(long completedSteps, long totalSteps) {
         this.completedSteps = completedSteps;
         this.totalSteps = totalSteps;
-        this.createdOn = System.currentTimeMillis();
     }
 
     public float percent() {
