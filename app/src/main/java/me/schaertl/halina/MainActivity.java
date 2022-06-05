@@ -9,26 +9,35 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.SearchView;
 import android.widget.TextView;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import me.schaertl.halina.storage.Storage;
-import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Word;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.Res;
-import me.schaertl.halina.support.Toaster;
-import me.schaertl.halina.support.WordListAdapter;
+import me.schaertl.halina.support.Task;
 
 public class MainActivity extends AppCompatActivity {
+    //
+    // Variables.
+    //
+
     /***
      * Time in ms when the list was most recently updated.
      */
     private volatile long lastResultSetAt;
+
+    //
+    // Android Lifetime.
+    //
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +128,27 @@ public class MainActivity extends AppCompatActivity {
         return super.onCreateOptionsMenu(menu);
     }
 
+    //
+    // List Logic.
+    //
+
+    private static class WordListAdapter extends ArrayAdapter<String> {
+        private final List<Word> words;
+
+        public WordListAdapter(Context context, int resource, List<Word> words) {
+            super(context, resource, toWordList(words));
+            this.words = new ArrayList<>(words);
+        }
+
+        public Word getUnderlyingWord(int position) {
+            return words.get(position);
+        }
+
+        private static List<String> toWordList(List<Word> words) {
+            return words.stream().map(w -> w.word).collect(Collectors.toList());
+        }
+    }
+
     /**
      * Update the main list to contain new elements.
      *
@@ -144,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
      * This is the worker thread that goes out to the word database and queries
      * it for possible candidates.
      */
-    private class ResultFinder extends Thread {
+    private class ResultFinder extends Task {
         private final Context parentContext;
 
         /**
@@ -170,14 +200,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void run() {
-            try {
-                final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
-                updateListWith(entries, this.startedAt);
-            } catch (DatabaseException e) {
-                final String msg = "Missing dictionary. Install one in Settings.";
-                Toaster.toastFrom(MainActivity.this, msg);
-            }
+        public void execute() throws Exception {
+            final List<Word> entries = Wiktionary.lookUpChoicesFor(this.query, this.parentContext);
+            updateListWith(entries, this.startedAt);
         }
     }
 }

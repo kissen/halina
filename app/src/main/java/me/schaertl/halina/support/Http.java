@@ -33,9 +33,19 @@ import okio.ForwardingSource;
 import okio.Okio;
 import okio.Source;
 
+/**
+ * Provide an easy to use HTTP API.
+ */
 public class Http {
     private Http() {}
 
+    /**
+     * Download some remote file to a temporary location on the file system.
+     *
+     * @param url URL of the file to download.
+     * @param progressHandler Progress will be reported to this handler.
+     * @return The location of the downloaded file. It is the callers responsibility to clean up the downloaded file.
+     */
     public static Result<String> downloadToTempDirectory(String url, ProgressHandler progressHandler) {
         try {
             final String fileLocation = downloadToTempDirectoryThrowing(url, progressHandler);
@@ -45,6 +55,12 @@ public class Http {
         }
     }
 
+    /**
+     * Download JSON from a remote location.
+     *
+     * @param url URL of the JSON file on the web.
+     * @return Parsed JSON.
+     */
     public static Result<JSONObject> getJson(String url) {
         try {
             final String body = getStringThrowing(url);

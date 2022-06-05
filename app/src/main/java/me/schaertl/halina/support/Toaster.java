@@ -7,11 +7,20 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * Provide an easy API for creating Android toast messages.
+ */
 public class Toaster {
     private final static String TAG = Toaster.class.getName();
 
     private Toaster() {}
 
+    /**
+     * Show a single toast message.
+     *
+     * @param activity Caller.
+     * @param message Message of the toast message.
+     */
     @SuppressLint("ShowToast")
     public static void toastFrom(AppCompatActivity activity, String message) {
         try {

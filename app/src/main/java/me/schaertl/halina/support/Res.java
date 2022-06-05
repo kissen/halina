@@ -12,6 +12,13 @@ import java.nio.charset.StandardCharsets;
 public class Res {
     private Res() {}
 
+    /**
+     * Load some resource from the app bundle.
+     *
+     * @param activity Caller requesting the resource.
+     * @param id Unique id of the given resource.
+     * @return The resource as a string or an error message on errors.
+     */
     public static String loadAsString(AppCompatActivity activity, int id) {
         try (final InputStream is = activity.getResources().openRawResource(id)) {
             final Charset utf8 = StandardCharsets.UTF_8;

@@ -11,6 +11,9 @@ import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * A {@link DateFormat} that implements the date/time format as defined in RFC3399.
+ */
 @SuppressLint("SimpleDateFormat")
 public class RFC3399 extends DateFormat {
     private final static String FORMAT_STRING = "yyyy-MM-dd'T'HH:mm:ssXXX";

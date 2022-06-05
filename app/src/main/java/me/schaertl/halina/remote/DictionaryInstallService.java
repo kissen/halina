@@ -242,8 +242,8 @@ public class DictionaryInstallService extends Service {
         if (progress == null) {
             notificationBuilder.setProgress(1, 0, true);
         } else {
-            final int max = Arithmetic.clamp(progress.getTotalSteps());
-            final int done = Arithmetic.clamp(progress.getCompletedSteps());
+            final int max = Arithmetic.clamp32(progress.getTotalSteps());
+            final int done = Arithmetic.clamp32(progress.getCompletedSteps());
             notificationBuilder.setProgress(max, done, false);
         }
 

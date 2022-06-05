@@ -1,11 +1,22 @@
 package me.schaertl.halina.support;
 
+import android.annotation.SuppressLint;
+
 import java.util.Arrays;
 import java.util.List;
 
 public class FileSizeFormatter {
     private FileSizeFormatter() {}
 
+    /**
+     * Format byte count into a human-readable format.
+     *
+     * For example, byte count 2048 is converted to "2K".
+     *
+     * @param nbytes Byte count.
+     * @return Human-readable string representation of nbytes.
+     */
+    @SuppressLint("DefaultLocale")
     public static String format(int nbytes) {
         final List<String> units = Arrays.asList(
                 "B", "KiB", "MiB", "GiB", "TiB"
