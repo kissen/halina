@@ -40,7 +40,7 @@
                     android:fontFamily="sans-serif"
                     android:linksClickable="true"
                     android:padding="8pt"
-                    android:textColor="?android:attr/colorForeground"
+                    android:textColor="@android:color/tab_indicator_text"
                     android:textSize="14sp" />
             </LinearLayout>
         </ScrollView>
