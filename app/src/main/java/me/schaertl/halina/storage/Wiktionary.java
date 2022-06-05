@@ -4,10 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.provider.ContactsContract;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -36,6 +33,23 @@ public class Wiktionary {
             candidates.sort(new WordComparator(query));
             return candidates;
         }
+    }
+
+    /**
+     * Given word, return Word object.
+     */
+    public static Optional<Word> queryWordFor(String word, Context context) throws DatabaseException {
+        // TODO: Write an efficient query to get just the word.
+
+        final List<Word> candidates = lookUpChoicesFor(word, context);
+
+        for (final Word candidate : candidates) {
+            if (candidate.word.equals(word)) {
+                return Optional.of(candidate);
+            }
+        }
+
+        return Optional.empty();
     }
 
     /**
@@ -104,7 +118,7 @@ public class Wiktionary {
     @SuppressLint("Range")
     private static List<Word> queryChoicesFor(String query, SQLiteDatabase db) {
         final String from = "words";
-        final String[] select = { "id", "word", "nreferences" };
+        final String[] select = { "id", "word" ,"revision", "nreferences" };
         final String where = "word LIKE ?";
         final String[] parameters = { query + "%" };
         final String limit = "100";
@@ -123,9 +137,10 @@ public class Wiktionary {
             do {
                 final int id = resultCursor.getInt(resultCursor.getColumnIndex("id"));
                 final String word = resultCursor.getString(resultCursor.getColumnIndex("word"));
+                final long revision = resultCursor.getLong(resultCursor.getColumnIndex("revision"));
                 final int nreferences = resultCursor.getInt(resultCursor.getColumnIndex("nreferences"));
 
-                final Word entry = new Word(id, word, nreferences);
+                final Word entry = new Word(id, word, revision, nreferences);
                 entries.add(entry);
             } while (resultCursor.moveToNext());
 

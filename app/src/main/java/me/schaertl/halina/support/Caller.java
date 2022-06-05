@@ -1,6 +1,7 @@
 package me.schaertl.halina.support;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -40,6 +41,11 @@ public class Caller {
         final Intent next = new Intent(activity, TextViewActivity.class);
         next.putExtras(arguments);
 
+        activity.startActivity(next);
+    }
+
+    public static void callBrowserFrom(AppCompatActivity activity, String url) {
+        final Intent next = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         activity.startActivity(next);
     }
 }

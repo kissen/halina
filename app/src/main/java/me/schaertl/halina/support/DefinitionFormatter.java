@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import me.schaertl.halina.storage.structs.Definition;
+import me.schaertl.halina.storage.structs.Word;
 
 public class DefinitionFormatter {
     private final static String REGEX = "\\[\\[(.*?)\\]\\]";
@@ -16,18 +17,29 @@ public class DefinitionFormatter {
 
     private DefinitionFormatter() {}
 
-    public static String format(String word, Definition boxed) {
+    public static String format( Definition box) {
         final StringBuilder buf = new StringBuilder();
 
-        buf.append("<ul>\n");
-
-        for (final String definition : uniqueElementsIn(boxed.definitions)) {
-            buf.append("    <p>");
+        for (final String definition : uniqueElementsIn(box.definitions)) {
+            buf.append("<p>");
             buf.append(htmlifyLinks(definition));
             buf.append("</p>\n");
         }
 
-        buf.append("</ul>\n");
+        return buf.toString();
+    }
+
+    public static String formatCopyingFor(Word word) {
+        final StringBuilder buf = new StringBuilder();
+
+        final String wordUrl = word.getOriginalUrl();
+
+        appendf(buf, "<p>\n");
+        appendf(buf, "  Dictionary entry licensed CC-BY-SA and based on");
+        appendf(buf, "  <a href=\"%s\">this original entry on Wiktionary.org</a>.\n", wordUrl);
+        appendf(buf, "  Refer to the original entry for detailed copyright and authorship information of the original work.");
+        appendf(buf, "</p>\n");
+
         return buf.toString();
     }
 
@@ -48,5 +60,10 @@ public class DefinitionFormatter {
         }
 
         return uniqueElements;
+    }
+
+    private static void appendf(StringBuilder dst, String format, Object... args) {
+        final String formatted = String.format(format, args);
+        dst.append(formatted);
     }
 }

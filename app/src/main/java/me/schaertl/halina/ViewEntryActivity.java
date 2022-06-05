@@ -17,11 +17,12 @@ import android.widget.TextView;
 
 import java.util.Optional;
 
-import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.Wiktionary;
+import me.schaertl.halina.storage.structs.Word;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.DefinitionFormatter;
+import me.schaertl.halina.support.Task;
 
 public class ViewEntryActivity extends AppCompatActivity {
     /**
@@ -71,10 +72,18 @@ public class ViewEntryActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void setHtmlContent(String html) {
-        // Created with much help from https://stackoverflow.com/a/19989677
-
+    private void setHtmlContentOnContentView(String html) {
         final TextView contentView = findViewById(R.id.text_content);
+        setHtmlContentOn(contentView, html);
+    }
+
+    private void setHtmlOnCopyingView(String html) {
+        final TextView copyingView = findViewById(R.id.text_copying);
+        setHtmlContentOn(copyingView, html);
+    }
+
+    private void setHtmlContentOn(TextView textView, String html) {
+        // Created with much help from https://stackoverflow.com/a/19989677
 
         final CharSequence markup = Html.fromHtml(html, 0);
         final SpannableStringBuilder builder = new SpannableStringBuilder(markup);
@@ -89,10 +98,19 @@ public class ViewEntryActivity extends AppCompatActivity {
             final ClickableSpan clickableSpan = new ClickableSpan() {
                 @Override
                 public void onClick(@NonNull View view) {
-                    final String addr = span.getURL();
-                    if (addr != null) {
-                        final String query = addr.replace("halina://", "");
+                    final String url = span.getURL();
+
+                    if (url == null) {
+                        return;
+                    }
+
+                    if (url.startsWith("halina://")) {
+                        final String query = url.replace("halina://", "");
                         Caller.callViewActivityFrom(ViewEntryActivity.this, query);
+                    }
+
+                    if (url.startsWith("https://")) {
+                        Caller.callBrowserFrom(ViewEntryActivity.this, url);
                     }
                 }
             };
@@ -102,12 +120,12 @@ public class ViewEntryActivity extends AppCompatActivity {
         }
 
         runOnUiThread(() -> {
-            contentView.setText(builder);
-            contentView.setMovementMethod(LinkMovementMethod.getInstance());
+            textView.setText(builder);
+            textView.setMovementMethod(LinkMovementMethod.getInstance());
         });
     }
 
-    private class DefinitionFinder extends Thread {
+    private class DefinitionFinder extends Task {
         private final Context context;
 
         public DefinitionFinder(Context context) {
@@ -115,25 +133,32 @@ public class ViewEntryActivity extends AppCompatActivity {
         }
 
         @Override
-        public void run() {
-            final Optional<Definition> boxed = lookUpDefinitions();
+        public void execute() throws Exception {
+            final Optional<Word> meta;
+            final Optional<Definition> definitions;
 
-            if (boxed.isPresent()) {
-                final Definition definition = boxed.get();
-                final String markup = DefinitionFormatter.format(word, definition);
-                setHtmlContent(markup);
+            if (!(meta = Wiktionary.queryWordFor(word, context)).isPresent()) {
+                return;
             }
+
+            if (!(definitions = lookUpDefinitions()).isPresent()) {
+                return;
+            }
+
+            final Definition definition = definitions.get();
+
+            final String definitionHtml = DefinitionFormatter.format(definition);
+            final String copyingHtml = DefinitionFormatter.formatCopyingFor(meta.get());
+
+            setHtmlContentOnContentView(definitionHtml);
+            setHtmlOnCopyingView(copyingHtml);
         }
 
-        private Optional<Definition> lookUpDefinitions() {
-            try {
-                if (wordId <= -1) {
-                    return Wiktionary.lookUpDefinitionFor(word, context);
-                } else {
-                    return Wiktionary.lookUpDefinitionFor(wordId, context);
-                }
-            } catch (DatabaseException e) {
-                return Optional.empty();
+        private Optional<Definition> lookUpDefinitions() throws Exception {
+            if (wordId <= -1) {
+                return Wiktionary.lookUpDefinitionFor(word, context);
+            } else {
+                return Wiktionary.lookUpDefinitionFor(wordId, context);
             }
         }
     }
