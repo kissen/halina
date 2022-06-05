@@ -15,13 +15,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.storage.structs.Word;
 import me.schaertl.halina.support.Caller;
-import me.schaertl.halina.support.DefinitionFormatter;
 import me.schaertl.halina.support.Task;
 
 public class ViewEntryActivity extends AppCompatActivity {
@@ -125,7 +130,14 @@ public class ViewEntryActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Task that runs in the background and renders the HTML for display.
+     */
     private class DefinitionFinder extends Task {
+        private final static String REGEX = "\\[\\[(.*?)\\]\\]";
+        private final static String SUBSTITUTION = "<a href=\"halina://$1\">$1</a>";
+        private final Pattern PATTERN = Pattern.compile(REGEX, Pattern.MULTILINE);
+
         private final Context context;
 
         public DefinitionFinder(Context context) {
@@ -147,8 +159,8 @@ public class ViewEntryActivity extends AppCompatActivity {
 
             final Definition definition = definitions.get();
 
-            final String definitionHtml = DefinitionFormatter.format(definition);
-            final String copyingHtml = DefinitionFormatter.formatCopyingFor(meta.get());
+            final String definitionHtml = formatDefinitions(definition);
+            final String copyingHtml = formatCopying(meta.get());
 
             setHtmlContentOnContentView(definitionHtml);
             setHtmlOnCopyingView(copyingHtml);
@@ -160,6 +172,53 @@ public class ViewEntryActivity extends AppCompatActivity {
             } else {
                 return Wiktionary.lookUpDefinitionFor(wordId, context);
             }
+        }
+
+        private String formatDefinitions(Definition definitions) {
+            final StringBuilder buf = new StringBuilder();
+
+            for (final String definition : uniqueElementsIn(definitions.definitions)) {
+                buf.append("<p>");
+                buf.append(htmlifyLinks(definition));
+                buf.append("</p>\n");
+            }
+
+            return buf.toString();
+        }
+
+        private String htmlifyLinks(String definition) {
+            final Matcher matcher = PATTERN.matcher(definition);
+            return matcher.replaceAll(SUBSTITUTION);
+        }
+
+        private List<String> uniqueElementsIn(List<String> list) {
+            // NOTE: We want to maintain the order in list!
+
+            final List<String> uniqueElements = new ArrayList<>(list.size());
+            final Set<String> seen = new HashSet<>();
+
+            for (final String element : list) {
+                if (!seen.contains(element)) {
+                    uniqueElements.add(element);
+                    seen.add(element);
+                }
+            }
+
+            return uniqueElements;
+        }
+
+        private String formatCopying(Word word) {
+            final StringBuilder buf = new StringBuilder();
+
+            buf.append("<p>\n");
+            buf.append("Dictionary entry licensed CC-BY-SA and based on");
+            buf.append("<a href=\"");
+            buf.append(word.getOriginalUrl());
+            buf.append("\">this original entry on Wiktionary.org</a>.\n");
+            buf.append("Refer to the original entry for detailed copyright and authorship information of the original work.");
+            buf.append("</p>\n");
+
+            return buf.toString();
         }
     }
 }
