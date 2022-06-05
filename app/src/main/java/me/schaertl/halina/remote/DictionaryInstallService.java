@@ -12,7 +12,6 @@ import android.os.Binder;
 import android.os.IBinder;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import me.schaertl.halina.MainActivity;
@@ -40,9 +39,9 @@ public class DictionaryInstallService extends Service {
 
     private static final String NOTIFICATION_CHANNEL_ID = "DictionaryInstallService#NOTIFCATION_CHANNEL_ID";
     private static final String NOTIFICATION_CHANNEL_NAME = "DictionaryInstallService";
-    private static final int NOTIFICATION_CHANNEL_IMPORTANCE = NotificationManager.IMPORTANCE_DEFAULT;
+    private static final int NOTIFICATION_CHANNEL_IMPORTANCE = NotificationManager.IMPORTANCE_LOW;
 
-    private static final int FOREGROUND_ID = 100;
+    private static final int FOREGROUND_ID = 0x6c6f7665;  // arbitrary
 
     //
     // Public Types.
@@ -88,6 +87,8 @@ public class DictionaryInstallService extends Service {
 
     private InstallTask installTask;
     private StopTask stopTask;
+
+    private NotificationCompat.Builder notificationBuilder;
 
     //
     // Static Helpers.
@@ -219,27 +220,36 @@ public class DictionaryInstallService extends Service {
             this, 0, intents, PendingIntent.FLAG_UPDATE_CURRENT
         );
 
-        // Now we can create the notification.
+        // Now we can create the notification. We have to re-use the notification builder
+        // to avoid annoying notifications that focus w/ every update, viz.
+        // https://stackoverflow.com/questions/6406730/updating-an-ongoing-notification-quietly
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
-                .setContentTitle("Halina")
-                .setOngoing(true)
-                .setContentIntent(pending);
-
-        if (text != null) {
-            builder = builder.setContentText(text);
+        if (notificationBuilder == null) {
+            notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle("Halina")
+                    .setOngoing(true)
+                    .setContentIntent(pending)
+                    .setOnlyAlertOnce(true);
         }
 
-        if (progress != null) {
+        if (text == null) {
+            notificationBuilder.setContentText("");
+        } else {
+            notificationBuilder.setContentText(text);
+        }
+
+        if (progress == null) {
+            notificationBuilder.setProgress(1, 0, true);
+        } else {
             final int max = Arithmetic.clamp(progress.getTotalSteps());
             final int done = Arithmetic.clamp(progress.getCompletedSteps());
-            builder = builder.setProgress(max, done, false);
+            notificationBuilder.setProgress(max, done, false);
         }
 
-        // Display the notifcation.
+        // Display the notification.
 
-        final Notification notification = builder.build();
+        final Notification notification = notificationBuilder.build();
         final NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.notify(FOREGROUND_ID, notification);
 

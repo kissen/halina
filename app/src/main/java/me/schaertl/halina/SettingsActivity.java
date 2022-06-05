@@ -91,13 +91,13 @@ public class SettingsActivity extends AppCompatActivity {
     protected synchronized void onStop() {
         super.onStop();
 
-        syncWithMetaDownloadService();
         unbindService(metaConnection);
         metaDownloadServiceIsBound = false;
 
-        syncWithInstallService();
         unbindService(installConnection);
         dictionaryInstallServiceIsBound = false;
+
+        syncWithServices();
     }
 
     @Override
@@ -106,13 +106,11 @@ public class SettingsActivity extends AppCompatActivity {
 
         final IntentFilter metaFilter = new IntentFilter(MetaDownloadService.BROADCAST_FILTER);
         registerReceiver(metaReceiver, metaFilter);
-        syncWithMetaDownloadService();
 
         final IntentFilter installFilter = new IntentFilter(DictionaryInstallService.BROADCAST_FILTER);
         registerReceiver(installReceiver, installFilter);
-        syncWithInstallService();
 
-        syncWithStorage();
+        syncWithServices();
     }
 
     @Override
@@ -130,16 +128,22 @@ public class SettingsActivity extends AppCompatActivity {
     private final BroadcastReceiver metaReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            syncWithMetaDownloadService();
+            syncWithServices();
         }
     };
 
     private final ServiceConnection metaConnection = new ServiceConnection() {
+        private final SettingsActivity parent = SettingsActivity.this;
+
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            final MetaDownloadService.MetaDownloadBinder binder = (MetaDownloadService.MetaDownloadBinder) iBinder;
-            metaDownloadService = binder.getService();
-            metaDownloadServiceIsBound = true;
+            synchronized (parent) {
+                final MetaDownloadService.MetaDownloadBinder binder = (MetaDownloadService.MetaDownloadBinder) iBinder;
+                metaDownloadService = binder.getService();
+                metaDownloadServiceIsBound = true;
+
+                syncWithServices();
+            }
         }
 
         @Override
@@ -151,7 +155,7 @@ public class SettingsActivity extends AppCompatActivity {
     private final BroadcastReceiver installReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            syncWithInstallService();
+            syncWithServices();
         }
     };
 
@@ -172,6 +176,8 @@ public class SettingsActivity extends AppCompatActivity {
                     dictionaryInstallService.installNewDictionary(context, url);
                     dictionaryInstallServiceUrl = null;
                 }
+
+                syncWithServices();
             }
         }
 
@@ -182,6 +188,23 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }
     };
+
+    private synchronized boolean installServiceIsActive() {
+        if (!dictionaryInstallServiceIsBound) {
+            return false;
+        }
+
+        final DictionaryInstallService.Report report = dictionaryInstallService.getReport();
+
+        switch (report.state) {
+            case READY:
+            case INSTALLED:
+            case ERROR:
+                return false;
+            default:
+                return true;
+        }
+    }
 
     //
     // Button Press Events.
@@ -305,6 +328,16 @@ public class SettingsActivity extends AppCompatActivity {
     // Display Current Dictionary Info.
     //
 
+    private synchronized void syncWithServices() {
+        syncWithStorage();
+
+        if (installServiceIsActive()) {
+            syncWithInstallService();
+        } else {
+            syncWithMetaDownloadService();
+        }
+    }
+
     private synchronized void syncWithStorage() {
         final Context context = getApplicationContext();
         final Optional<Date> installed = Wiktionary.getCreatedOn(context);
@@ -332,6 +365,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private synchronized void syncWithMetaDownloadService() {
         if (!metaDownloadServiceIsBound) {
+            onMetaDisconnected();
             return;
         }
 
@@ -356,21 +390,30 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    private synchronized void onMetaDisconnected() {
+        runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+            downloadNewDictionaryPreference.setVisible(false);
+        });
+    }
+
     private synchronized void onMetaReady() {
         runOnUiThread(() -> {
             checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+            checkForDictionariesPreference.setVisible(true);
 
-            downloadNewDictionaryPreference.setVisible(false);
             downloadNewDictionaryPreference.setSummary("");
+            downloadNewDictionaryPreference.setVisible(false);
         });
     }
 
     private synchronized void onMetaDownloading() {
         runOnUiThread(() -> {
             checkForDictionariesPreference.setSummary("Downloading...");
+            checkForDictionariesPreference.setVisible(true);
 
-            downloadNewDictionaryPreference.setVisible(false);
             downloadNewDictionaryPreference.setSummary("");
+            downloadNewDictionaryPreference.setVisible(false);
         });
     }
 
@@ -383,6 +426,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             runOnUiThread(() -> {
                 checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+                checkForDictionariesPreference.setVisible(true);
 
                 downloadNewDictionaryPreference.setSummary(summary);
                 downloadNewDictionaryPreference.setVisible(true);
@@ -394,6 +438,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             runOnUiThread(() -> {
                 checkForDictionariesPreference.setSummary(summary);
+                checkForDictionariesPreference.setVisible(true);
 
                 downloadNewDictionaryPreference.setVisible(false);
                 downloadNewDictionaryPreference.setSummary("");
@@ -407,6 +452,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         runOnUiThread(() -> {
             checkForDictionariesPreference.setSummary(summary);
+            checkForDictionariesPreference.setVisible(true);
 
             downloadNewDictionaryPreference.setVisible(false);
             downloadNewDictionaryPreference.setSummary("");
@@ -436,6 +482,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private synchronized void syncWithInstallService() {
         if (!dictionaryInstallServiceIsBound) {
+            onInstallDisconnected();
             return;
         }
 
@@ -462,14 +509,20 @@ public class SettingsActivity extends AppCompatActivity {
                 onInstallError(report);
                 break;
         }
+    }
 
-        syncWithStorage();
+    private synchronized void onInstallDisconnected() {
+        runOnUiThread(() -> {
+            checkForDictionariesPreference.setVisible(false);
+            downloadNewDictionaryPreference.setVisible(false);
+        });
     }
 
     private synchronized void onInstallDownloading(DictionaryInstallService.Report report) {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setSummary("");
             checkForDictionariesPreference.setVisible(false);
 
             downloadNewDictionaryPreference.setSummary(summary);
@@ -482,6 +535,7 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setSummary("");
             checkForDictionariesPreference.setVisible(false);
 
             downloadNewDictionaryPreference.setSummary(summary);
@@ -493,6 +547,7 @@ public class SettingsActivity extends AppCompatActivity {
         final String summary = DictionaryInstallService.format(report);
 
         runOnUiThread(() -> {
+            checkForDictionariesPreference.setSummary("");
             checkForDictionariesPreference.setVisible(false);
 
             downloadNewDictionaryPreference.setSummary(summary);
@@ -508,9 +563,10 @@ public class SettingsActivity extends AppCompatActivity {
                 dictionaryInstallService.stop();
             }
 
-            downloadNewDictionaryPreference.setVisible(false);
-            downloadNewDictionaryPreference.setSummary(summary);
+            checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+            checkForDictionariesPreference.setVisible(true);
 
+            downloadNewDictionaryPreference.setSummary(summary);
             checkForDictionariesPreference.setVisible(true);
         });
     }
@@ -523,10 +579,11 @@ public class SettingsActivity extends AppCompatActivity {
                 dictionaryInstallService.stop();
             }
 
+            checkForDictionariesPreference.setSummary(checkForDictionariesSummary);
+            checkForDictionariesPreference.setVisible(true);
+
             downloadNewDictionaryPreference.setSummary(summary);
             downloadNewDictionaryPreference.setVisible(true);
-
-            checkForDictionariesPreference.setVisible(true);
         });
     }
 }

@@ -23,6 +23,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:icon="@android:drawable/ic_menu_rotate"
+            app:isPreferenceVisible="false"
             app:key="preference_download_meta"
             app:summary="Query for a new version of the installed dictionary"
             app:title="Check for new dictionary" />
