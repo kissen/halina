@@ -425,7 +425,7 @@ public class DictionaryInstallService extends Service {
          */
         private String downloadFile(String url) throws Exception {
             setProgress(DictionaryInstallService.State.DOWNLOADING, Progress.zero());
-            return Http.downloadToTempDirectory(url, this).get();
+            return Http.downloadToTempDirectory(url, this);
         }
 
         /**

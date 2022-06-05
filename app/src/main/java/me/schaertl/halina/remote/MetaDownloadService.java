@@ -9,7 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import me.schaertl.halina.support.Http;
-import me.schaertl.halina.support.Result;
 import me.schaertl.halina.support.Task;
 
 public class MetaDownloadService extends Service {
@@ -131,23 +130,12 @@ public class MetaDownloadService extends Service {
 
     private class DownloadTask extends Task {
         @Override
-        public void execute() {
-            final Result<JSONObject> json;
-            final Result<RemoteDictionaryMeta> meta;
+        public void execute() throws Exception {
+            final String url = "https://halina.schaertl.me/dictionaries/halina-meta.json";
+            final JSONObject json = Http.getJson(url);
+            final RemoteDictionaryMeta meta = RemoteDictionaryMeta.from(json);
 
-            final String addr = "https://halina.schaertl.me/dictionaries/halina-meta.json";
-
-            if ((json = Http.getJson(addr)).isError()) {
-                setError(json.getError());
-                return;
-            }
-
-            if ((meta = RemoteDictionaryMeta.from(json.getResult())).isError()) {
-                setError(meta.getError());
-                return;
-            }
-
-            setResult(meta.getResult());
+            setResult(meta);
         }
 
         @Override
@@ -176,20 +164,22 @@ public class MetaDownloadService extends Service {
          */
         public final String url;
 
-        public static Result<RemoteDictionaryMeta> from(JSONObject json) {
-            try {
-                final String version = json.getString("version");
-                final int nbytes = json.getInt("nbytes");
-                final String url = json.getString("url");
+        /**
+         * Parse JSON meta information.
+         *
+         * @param json The JSON object that contains the meta information.
+         * @return The parsed meta information.
+         * @throws JSONException If the JSON format was not as expected.
+         */
+        public static RemoteDictionaryMeta from(JSONObject json) throws JSONException {
+            final String version = json.getString("version");
+            final int nbytes = json.getInt("nbytes");
+            final String url = json.getString("url");
 
-                final RemoteDictionaryMeta meta = new RemoteDictionaryMeta(version, nbytes, url);
-                return Result.of(meta);
-            } catch (JSONException e) {
-                return Result.error(e);
-            }
+            return new RemoteDictionaryMeta(version, nbytes, url);
         }
 
-        public RemoteDictionaryMeta(String version, int nbytes, String url) {
+        private RemoteDictionaryMeta(String version, int nbytes, String url) {
             this.version = version;
             this.nbytes = nbytes;
             this.url = url;

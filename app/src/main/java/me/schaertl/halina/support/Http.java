@@ -9,6 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.apache.commons.io.IOUtils;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.FileOutputStream;
@@ -38,50 +39,24 @@ public class Http {
     private Http() {}
 
     /**
+     * Download JSON from a remote location.
+     *
+     * @param url URL of the JSON file on the web.
+     * @return Parsed JSON.
+     */
+    public static JSONObject getJson(String url) throws IOException, JSONException {
+        final String body = getStringThrowing(url);
+        return new JSONObject(body);
+    }
+
+    /**
      * Download some remote file to a temporary location on the file system.
      *
      * @param url URL of the file to download.
      * @param progressHandler Progress will be reported to this handler.
      * @return The location of the downloaded file. It is the callers responsibility to clean up the downloaded file.
      */
-    public static Result<String> downloadToTempDirectory(String url, ProgressHandler progressHandler) {
-        try {
-            final String fileLocation = downloadToTempDirectoryThrowing(url, progressHandler);
-            return Result.of(fileLocation);
-        } catch (Exception e) {
-            return Result.error(e);
-        }
-    }
-
-    /**
-     * Download JSON from a remote location.
-     *
-     * @param url URL of the JSON file on the web.
-     * @return Parsed JSON.
-     */
-    public static Result<JSONObject> getJson(String url) {
-        try {
-            final String body = getStringThrowing(url);
-            final JSONObject json = new JSONObject(body);
-            return Result.of(json);
-        } catch (Exception e) {
-            return Result.error(e);
-        }
-    }
-
-    private static String getStringThrowing(String url) throws IOException {
-        final OkHttpClient client = new OkHttpClient();
-        final Request request = new Request.Builder().url(url).addHeader("User-Agent", UserAgent.get()).build();
-
-        try (final Response response = client.newCall(request).execute()) {
-            return Objects.requireNonNull(response.body()).string();
-        }
-    }
-
-    private static String downloadToTempDirectoryThrowing(String url, ProgressHandler progressHandler) throws Exception {
-        // Set up Okhttp request and client. Using this API is honestly more complicated
-        // than writing the core dictionary of this app.
-
+    public static String downloadToTempDirectory(String url, ProgressHandler progressHandler) throws IOException {
         final Request request = new Request.Builder().url(url).addHeader("User-Agent", UserAgent.get()).build();
 
         final OkHttpClient client = new OkHttpClient.Builder().addNetworkInterceptor(new Interceptor() {
@@ -114,6 +89,15 @@ public class Http {
         }
 
         return tempFile.toString();
+    }
+
+    private static String getStringThrowing(String url) throws IOException {
+        final OkHttpClient client = new OkHttpClient();
+        final Request request = new Request.Builder().url(url).addHeader("User-Agent", UserAgent.get()).build();
+
+        try (final Response response = client.newCall(request).execute()) {
+            return Objects.requireNonNull(response.body()).string();
+        }
     }
 
     private static class ProgressResponseBody extends ResponseBody {
@@ -152,7 +136,7 @@ public class Http {
                 long totalBytesRead = 0L;
 
                 @Override
-                public long read(Buffer sink, long byteCount) throws IOException {
+                public long read(@NonNull Buffer sink, long byteCount) throws IOException {
                     long bytesRead = super.read(sink, byteCount);
                     totalBytesRead += bytesRead != -1 ? bytesRead : 0;
 
