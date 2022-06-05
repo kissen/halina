@@ -53,7 +53,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Set up activity.
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.settings_activity);
+        setContentView(R.layout.activity_settings);
         setTitle("Settings");
 
         // Configure action bar.
