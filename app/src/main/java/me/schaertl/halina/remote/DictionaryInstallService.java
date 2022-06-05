@@ -226,7 +226,7 @@ public class DictionaryInstallService extends Service {
 
         if (notificationBuilder == null) {
             notificationBuilder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.muse)
                     .setContentTitle("Halina")
                     .setOngoing(true)
                     .setContentIntent(pending)
