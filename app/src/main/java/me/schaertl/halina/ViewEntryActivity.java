@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import me.schaertl.halina.storage.exceptions.DatabaseException;
 import me.schaertl.halina.storage.structs.Definition;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.storage.structs.Word;
@@ -146,27 +147,17 @@ public class ViewEntryActivity extends AppCompatActivity {
 
         @Override
         public void execute() throws Exception {
-            final Optional<Word> meta;
-            final Optional<Definition> definitions;
+            final Word meta = Wiktionary.queryWordFor(word, context);
+            final Definition definitions = lookUpDefinitions();
 
-            if (!(meta = Wiktionary.queryWordFor(word, context)).isPresent()) {
-                return;
-            }
-
-            if (!(definitions = lookUpDefinitions()).isPresent()) {
-                return;
-            }
-
-            final Definition definition = definitions.get();
-
-            final String definitionHtml = formatDefinitions(definition);
-            final String copyingHtml = formatCopying(meta.get());
-
+            final String definitionHtml = formatDefinitions(definitions);
             setHtmlContentOnContentView(definitionHtml);
+
+            final String copyingHtml = formatCopying(meta);
             setHtmlOnCopyingView(copyingHtml);
         }
 
-        private Optional<Definition> lookUpDefinitions() throws Exception {
+        private Definition lookUpDefinitions() throws DatabaseException {
             if (wordId <= -1) {
                 return Wiktionary.lookUpDefinitionFor(word, context);
             } else {
@@ -211,10 +202,10 @@ public class ViewEntryActivity extends AppCompatActivity {
             final StringBuilder buf = new StringBuilder();
 
             buf.append("<p>\n");
-            buf.append("Dictionary entry licensed CC-BY-SA and based on");
+            buf.append("Dictionary entry licensed CC-BY-SA and based on ");
             buf.append("<a href=\"");
             buf.append(word.getOriginalUrl());
-            buf.append("\">this original entry on Wiktionary.org</a>.\n");
+            buf.append("\">this original entry on Wiktionary.org</a>. ");
             buf.append("Refer to the original entry for detailed copyright and authorship information of the original work.");
             buf.append("</p>\n");
 

@@ -38,24 +38,17 @@ public class Wiktionary {
     /**
      * Given word, return Word object.
      */
-    public static Optional<Word> queryWordFor(String word, Context context) throws DatabaseException {
+    public static Word queryWordFor(String word, Context context) throws DatabaseException {
         // TODO: Write an efficient query to get just the word.
 
-        final List<Word> candidates = lookUpChoicesFor(word, context);
-
-        for (final Word candidate : candidates) {
-            if (candidate.word.equals(word)) {
-                return Optional.of(candidate);
-            }
-        }
-
-        return Optional.empty();
+        final List<Word> ws = lookUpChoicesFor(word, context);
+        return ws.stream().filter(w -> w.word.equals(word)).findFirst().orElseThrow(() -> new DatabaseException("no such word"));
     }
 
     /**
      * Given query string, return the definition for given id.
      */
-    public static Optional<Definition> lookUpDefinitionFor(int wordId, Context context) throws DatabaseException {
+    public static Definition lookUpDefinitionFor(int wordId, Context context) throws DatabaseException {
         try (SQLiteDatabase db = getDatabaseFor(context)) {
             return queryDefinitionFor(wordId, db);
         }
@@ -64,7 +57,7 @@ public class Wiktionary {
     /**
      * Given query string, return the definition for given word.
      */
-    public static Optional<Definition> lookUpDefinitionFor(String word, Context context) throws DatabaseException {
+    public static Definition lookUpDefinitionFor(String word, Context context) throws DatabaseException {
         try (SQLiteDatabase db = getDatabaseFor(context)) {
             return queryDefinitionFor(word, db);
         }
@@ -72,6 +65,7 @@ public class Wiktionary {
 
     /**
      * Return when the database was created (on the backend.)
+     * @return The date or an empty optional if no dictionary is installed.
      */
     public static Optional<Date> getCreatedOn(Context context) {
         try {
@@ -83,7 +77,8 @@ public class Wiktionary {
     }
 
     /**
-     * Return copying information embeded in database.
+     * Return copying information embedded in database.
+     * @return The copying text as-is or an empty optional if no dictionary is installed.
      */
     public static Optional<String> getCopying(Context context) {
         try {
@@ -149,7 +144,7 @@ public class Wiktionary {
     }
 
     @SuppressLint("Range")
-    private static Optional<Definition> queryDefinitionFor(int wordId, SQLiteDatabase db) {
+    private static Definition queryDefinitionFor(int wordId, SQLiteDatabase db) throws DatabaseException {
         final String from = "definitions";
         final String[] select = { "word_id", "definition" };
         final String where = "word_id=" + wordId;
@@ -157,11 +152,11 @@ public class Wiktionary {
 
         try (Cursor resultCursor = db.query(from, select, where, null, null, null, null, limit)) {
             if (resultCursor == null) {
-                return Optional.empty();
+                throw new DatabaseException("no results");
             }
 
             if (!resultCursor.moveToFirst()) {
-                return Optional.empty();
+                throw new DatabaseException("empty result");
             }
 
             final List<String> definitions = new ArrayList<>();
@@ -171,16 +166,15 @@ public class Wiktionary {
                 definitions.add(definition);
             } while (resultCursor.moveToNext());
 
-            final Definition boxed = new Definition(wordId, definitions);
-            return Optional.of(boxed);
+            return new Definition(wordId, definitions);
         }
     }
 
     @SuppressLint("Range")
-    private static Optional<Definition> queryDefinitionFor(String word, SQLiteDatabase db) {
+    private static Definition queryDefinitionFor(String word, SQLiteDatabase db) throws DatabaseException {
         final Optional<Integer> wordId = queryWordIdFor(word, db);
         if (!wordId.isPresent()) {
-            return Optional.empty();
+            throw new DatabaseException("no word_id for given word");
         }
 
         return queryDefinitionFor(wordId.get(), db);
