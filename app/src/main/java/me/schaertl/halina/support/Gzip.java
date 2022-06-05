@@ -5,9 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.GZIPInputStream;
 
-import me.schaertl.halina.remote.structs.Progress;
-import me.schaertl.halina.remote.structs.ProgressHandler;
-
 /**
  * Provide an easy to use GZIP API.
  */

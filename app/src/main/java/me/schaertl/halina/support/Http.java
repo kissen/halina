@@ -19,8 +19,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
-import me.schaertl.halina.remote.structs.Progress;
-import me.schaertl.halina.remote.structs.ProgressHandler;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;

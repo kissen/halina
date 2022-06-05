@@ -22,7 +22,6 @@ import java.util.Optional;
 
 import me.schaertl.halina.remote.MetaDownloadService;
 import me.schaertl.halina.remote.DictionaryInstallService;
-import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.storage.Wiktionary;
 import me.schaertl.halina.support.Caller;
 import me.schaertl.halina.support.FileSizeFormatter;
@@ -417,7 +416,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized void onMetaDownloaded(RemoteDictionaryMeta meta) {
+    private synchronized void onMetaDownloaded(MetaDownloadService.RemoteDictionaryMeta meta) {
         if (hasNewerDictionary(meta)) {
             // meta contains a new dictionary the user might want to download
 
@@ -459,7 +458,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
-    private synchronized boolean hasNewerDictionary(RemoteDictionaryMeta meta) {
+    private synchronized boolean hasNewerDictionary(MetaDownloadService.RemoteDictionaryMeta meta) {
         final Context context = getApplicationContext();
 
         final Optional<Date> installed = Wiktionary.getCreatedOn(context);

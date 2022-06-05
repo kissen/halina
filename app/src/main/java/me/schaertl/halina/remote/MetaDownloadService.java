@@ -5,9 +5,9 @@ import android.content.Intent;
 import android.os.Binder;
 import android.os.IBinder;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import me.schaertl.halina.remote.structs.RemoteDictionaryMeta;
 import me.schaertl.halina.support.Http;
 import me.schaertl.halina.support.Result;
 import me.schaertl.halina.support.Task;
@@ -153,6 +153,46 @@ public class MetaDownloadService extends Service {
         @Override
         public void on(Exception e) {
             setError(e);
+        }
+    }
+
+    /**
+     * Represents the metadata provided by some server from which we might
+     * want to download a dictionary database.
+     */
+    public static class RemoteDictionaryMeta {
+        /**
+         * Version of the dictionary. Should be a string parsable as RFC3399 date/time string.
+         */
+        public final String version;
+
+        /**
+         * File size of given compressed dictionary in bytes.
+         */
+        public final int nbytes;
+
+        /**
+         * HTTP location of the dictionary database.
+         */
+        public final String url;
+
+        public static Result<RemoteDictionaryMeta> from(JSONObject json) {
+            try {
+                final String version = json.getString("version");
+                final int nbytes = json.getInt("nbytes");
+                final String url = json.getString("url");
+
+                final RemoteDictionaryMeta meta = new RemoteDictionaryMeta(version, nbytes, url);
+                return Result.of(meta);
+            } catch (JSONException e) {
+                return Result.error(e);
+            }
+        }
+
+        public RemoteDictionaryMeta(String version, int nbytes, String url) {
+            this.version = version;
+            this.nbytes = nbytes;
+            this.url = url;
         }
     }
 }
